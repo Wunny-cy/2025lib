@@ -6,7 +6,47 @@ class VisionDetector:
         # 加载YOLOv8模型
         self.model = YOLO('best.pt')  # 使用预训练模型，您也可以使用自己训练的模型
         self.image_center_threshold = 50  # 图像中心区域的阈值（像素）
+
+    def get_camera_image(self):
+        """
+        获取摄像头图像并实时显示（最高分辨率）
+        Returns:
+            numpy.ndarray: 图像数据
+        """
+        # 打开摄像头
+        cap = cv2.VideoCapture(0)
         
+        if not cap.isOpened():
+            raise Exception("无法打开摄像头")
+        
+        try:
+            # 获取摄像头支持的最高分辨率
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)  # 设置一个很大的值
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+            
+            # 获取实际设置的分辨率
+            actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            print(f"摄像头分辨率: {actual_width}x{actual_height}")
+            
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    raise Exception("无法读取图像")
+                
+                # 显示图像
+                cv2.imshow('Camera', frame)
+                
+                # 按'q'键退出
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                
+            return frame
+        
+        finally:
+            cap.release()
+            cv2.destroyAllWindows()
+    
     def get_image_center(self, image):
         """
         获取图像中心位置
@@ -58,6 +98,22 @@ class VisionDetector:
         
         return None
     
+    def convert_to_3d_coordinates(self, bbox):
+        """
+        将2D边界框坐标转换为3D坐标
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+        Returns:
+            tuple: (x, y, z) 3D坐标
+        """
+        # 这里需要根据实际情况实现坐标转换
+        # 示例实现，需要根据实际相机参数和机器人坐标系调整
+        x1, y1, x2, y2 = bbox
+        x = (x1 + x2) / 2
+        y = (y1 + y2) / 2
+        z = 150  # 默认高度，需要根据实际情况调整
+        return (x, y, z)
+
     def detect_drinks(self, image, target_drinks):
         """
         检测指定饮料并返回3D坐标
@@ -93,46 +149,7 @@ class VisionDetector:
         
         return detected_drinks
     
-    def get_camera_image(self):
-        """
-        获取摄像头图像并实时显示（最高分辨率）
-        Returns:
-            numpy.ndarray: 图像数据
-        """
-        # 打开摄像头
-        cap = cv2.VideoCapture(0)
-        
-        if not cap.isOpened():
-            raise Exception("无法打开摄像头")
-        
-        try:
-            # 获取摄像头支持的最高分辨率
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)  # 设置一个很大的值
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
-            
-            # 获取实际设置的分辨率
-            actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            print(f"摄像头分辨率: {actual_width}x{actual_height}")
-            
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    raise Exception("无法读取图像")
-                
-                # 显示图像
-                cv2.imshow('Camera', frame)
-                
-                # 按'q'键退出
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-                
-            return frame
-        
-        finally:
-            cap.release()
-            cv2.destroyAllWindows()
-
+    
     def test_model(self):
         """
         测试模型检测效果，实时显示检测结果
@@ -184,22 +201,7 @@ class VisionDetector:
             cap.release()
             cv2.destroyAllWindows()
 
-    def convert_to_3d_coordinates(self, bbox):
-        """
-        将2D边界框坐标转换为3D坐标
-        Args:
-            bbox: 边界框坐标 (x1, y1, x2, y2)
-        Returns:
-            tuple: (x, y, z) 3D坐标
-        """
-        # 这里需要根据实际情况实现坐标转换
-        # 示例实现，需要根据实际相机参数和机器人坐标系调整
-        x1, y1, x2, y2 = bbox
-        x = (x1 + x2) / 2
-        y = (y1 + y2) / 2
-        z = 150  # 默认高度，需要根据实际情况调整
-        return (x, y, z)
-
+    
 def main():
     # 测试代码
     detector = VisionDetector()

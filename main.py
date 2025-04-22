@@ -5,11 +5,12 @@ import time
 
 class Robot:
     def __init__(self):
+        print("初始化")
         self.target_drinks = ["yykx", "wz", "bs", "yld"]#["营养快线", "旺仔", "百事", "养乐多"]
         self.shelf_drinks = ["riosmt", "dpty", "cp", "jdb"]#["锐澳水蜜桃", "东鹏", "茶π柠檬红茶", "加多宝"]
         self.collected_items = []
         self.vision_detector = VisionDetector()
-        self.serial_comm = SerialCommunication(port='COM13')
+        self.serial_comm = SerialCommunication(port='COM13',baudrate=115200)
         
         # 定义第三层的放置位置
         self.shelf_positions = [
@@ -184,22 +185,69 @@ class Robot:
                     break
         
     def execute_task(self):
-        """执行完整任务"""
+        """执行移动任务"""
         try:
-            # 1. 观察样品
-            # sample_item = self.observe_sample_item()
-            # print(f"检测到的样品物品: {sample_item}")
+            # 前进指定距离
+            print("执行任务一：前进500单位")
+            self.serial_comm.send_command("FWD")
+            time.sleep(2)  # 等待移动完成
             
-            # 2. 收集第二层饮料
-            self.collect_second_level_drinks()
-            print(f"已收集的饮料: {self.collected_items}")
+            # # 后退指定距离
+            # print("执行任务二：后退500单位")
+            # self.serial_comm.send_command("BWD")
+            # time.sleep(2)
             
-            # # 3. 处理第一层饮料
-            # self.handle_first_level_drinks()
+            # # 左移指定距离
+            # print("执行任务三：左移500单位")
+            # self.serial_comm.send_command("LFT")
+            # time.sleep(2)
             
-            # # 4. 收集样品物品
-            # self.collect_sample_items(sample_item)
-            # print(f"最终收集的物品: {self.collected_items}")
+            # # 右移指定距离
+            # print("执行任务四：右移500单位")
+            # self.serial_comm.send_command("RGT")
+            # time.sleep(2)
+            
+            # # 任务一
+            # print("执行任务五：前进300单位")
+            # self.serial_comm.send_command("TK1")
+            # time.sleep(1.5)
+            
+            # # 任务二
+            # print("执行任务六：后退300单位")
+            # self.serial_comm.send_command("TK2")
+            # time.sleep(1.5)
+            
+            # # 任务三
+            # print("执行任务七：左移300单位")
+            # self.serial_comm.send_command("TK3")
+            # time.sleep(1.5)
+            
+            # # 任务四
+            # print("执行任务八：右移300单位")
+            # self.serial_comm.send_command("TK4")
+            # time.sleep(1.5)
+            
+            # # 任务五
+            # print("执行任务九：前进200单位")
+            # self.serial_comm.send_command("TK5")
+            # time.sleep(1)
+            
+            # # 任务六
+            # print("执行任务十：后退200单位")
+            # self.serial_comm.send_command("TK6")
+            # time.sleep(1)
+            
+            # # 左转指定角度
+            # print("执行任务十一：左转90度")
+            # self.serial_comm.send_command("RTL")
+            # time.sleep(1)
+            
+            # # 右转指定角度
+            # print("执行任务十二：右转90度")
+            # self.serial_comm.send_command("RTR")
+            # time.sleep(1)
+            
+            print("所有移动任务执行完成")
             
         except Exception as e:
             print(f"任务执行出错: {str(e)}")
@@ -211,3 +259,5 @@ def main():
     robot = Robot()
     robot.execute_task()
 
+if __name__ == "__main__":
+    main() 

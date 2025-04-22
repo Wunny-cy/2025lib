@@ -84,40 +84,7 @@ class SerialCommunication:
             return None
         except Exception as e:
             raise Exception(f"读取响应失败: {str(e)}")
-    
-    def move_to_position(self, x, y, z):
-        """
-        控制机器人移动到指定位置
-        Args:
-            x: X坐标
-            y: Y坐标
-            z: Z坐标
-        """
-        command = f"G0 X{x} Y{y} Z{z}"
-        self.send_command(command)
-        # 等待移动完成
-        while True:
-            response = self.read_response()
-            if response == "ok":
-                break
-            time.sleep(0.1)
-    
-    def grab_item(self):
-        """
-        执行抓取动作
-        """
-        self.send_command("M3")  # 打开夹爪
-        time.sleep(1)
-        self.send_command("M4")  # 关闭夹爪
-        time.sleep(1)
-    
-    def release_item(self):
-        """
-        执行释放动作
-        """
-        self.send_command("M3")  # 打开夹爪
-        time.sleep(1)
-    
+
     def close(self):
         """
         关闭串口连接

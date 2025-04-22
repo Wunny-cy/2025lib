@@ -1,6 +1,5 @@
 from ultralytics import YOLO
 import cv2
-import numpy as np
 
 class VisionDetector:
     def __init__(self):
@@ -61,7 +60,7 @@ class VisionDetector:
     
     def detect_drinks(self, image, target_drinks):
         """
-        检测指定饮料
+        检测指定饮料并返回3D坐标
         Args:
             image: 输入图像
             target_drinks: 需要检测的饮料列表
@@ -79,15 +78,17 @@ class VisionDetector:
                 class_id = int(box.cls[0])
                 class_name = result.names[class_id]
                 
-                # 如果检测到的物品在目标饮料列表中
                 if class_name in target_drinks and confidence > 0.5:
-                    # 获取边界框坐标
                     x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    position_2d = (x1, y1, x2, y2)
+                    position_3d = self.convert_to_3d_coordinates(position_2d)
+                    
                     detected_drinks.append({
                         'name': class_name,
-                        'position': (x1, y1, x2, y2),
+                        'position_2d': position_2d,
+                        'position_3d': position_3d,
                         'confidence': confidence,
-                        'is_in_center': self.is_in_center((x1, y1, x2, y2), image_center)
+                        'is_in_center': self.is_in_center(position_2d, image_center)
                     })
         
         return detected_drinks
@@ -182,6 +183,22 @@ class VisionDetector:
         finally:
             cap.release()
             cv2.destroyAllWindows()
+
+    def convert_to_3d_coordinates(self, bbox):
+        """
+        将2D边界框坐标转换为3D坐标
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+        Returns:
+            tuple: (x, y, z) 3D坐标
+        """
+        # 这里需要根据实际情况实现坐标转换
+        # 示例实现，需要根据实际相机参数和机器人坐标系调整
+        x1, y1, x2, y2 = bbox
+        x = (x1 + x2) / 2
+        y = (y1 + y2) / 2
+        z = 150  # 默认高度，需要根据实际情况调整
+        return (x, y, z)
 
 def main():
     # 测试代码

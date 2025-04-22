@@ -22,7 +22,38 @@ class Robot:
         # 定义置物筐位置
         self.basket_position = (500, 100, 150)  # 置物筐位置
     
-    
+    def move_to_position(self, x, y, z):
+        """
+        控制机器人移动到指定位置
+        Args:
+            x: X坐标
+            y: Y坐标
+            z: Z坐标
+        """
+        command = f"G0 X{x} Y{y} Z{z}"
+        self.serial_comm.send_command(command)
+        # 等待移动完成
+        while True:
+            response = self.serial_comm.read_response()
+            if response == "ok":
+                break
+            time.sleep(0.1)
+
+    def grab_item(self):
+        """
+        执行抓取动作
+        """
+        self.serial_comm.send_command("M3")  # 打开夹爪
+        time.sleep(1)
+        self.serial_comm.send_command("M4")  # 关闭夹爪
+        time.sleep(1)
+
+    def release_item(self):
+        """
+        执行释放动作
+        """
+        self.serial_comm.send_command("M3")  # 打开夹爪
+        time.sleep(1)
     
     def move_robot_to_center_item(self, position):
         """
@@ -54,19 +85,19 @@ class Robot:
         # 移动机器人使物品位于中心
         self.move_robot_to_center_item(position)
         
-        # 获取物品的3D坐标（这里需要根据实际情况转换）
-        x, y, z = self.convert_to_3d_coordinates(position)
+        # 获取物品的3D坐标
+        x, y, z = self.vision_detector.convert_to_3d_coordinates(position)
         
         # 移动到物品上方
-        self.serial_comm.move_to_position(x, y, z + 50)
+        self.move_to_position(x, y, z + 50)
         time.sleep(1)
         # 下降到物品位置
-        self.serial_comm.move_to_position(x, y, z)
+        self.move_to_position(x, y, z)
         time.sleep(1)
         # 抓取物品
-        self.serial_comm.grab_item()
+        self.grab_item()
         # 抬起物品
-        self.serial_comm.move_to_position(x, y, z + 50)
+        self.move_to_position(x, y, z + 50)
         time.sleep(1)
         
     def move_and_place(self, position):
@@ -77,32 +108,16 @@ class Robot:
         """
         x, y, z = position
         # 移动到目标位置上方
-        self.serial_comm.move_to_position(x, y, z + 50)
+        self.move_to_position(x, y, z + 50)
         time.sleep(1)
         # 下降到目标位置
-        self.serial_comm.move_to_position(x, y, z)
+        self.move_to_position(x, y, z)
         time.sleep(1)
         # 释放物品
-        self.serial_comm.release_item()
+        self.release_item()
         # 抬起机械臂
-        self.serial_comm.move_to_position(x, y, z + 50)
+        self.move_to_position(x, y, z + 50)
         time.sleep(1)
-        
-    def convert_to_3d_coordinates(self, bbox):
-        """
-        将2D边界框坐标转换为3D坐标
-        Args:
-            bbox: 边界框坐标 (x1, y1, x2, y2)
-        Returns:
-            tuple: (x, y, z) 3D坐标
-        """
-        # 这里需要根据实际情况实现坐标转换
-        # 示例实现，需要根据实际相机参数和机器人坐标系调整
-        x1, y1, x2, y2 = bbox
-        x = (x1 + x2) / 2
-        y = (y1 + y2) / 2
-        z = 150  # 默认高度，需要根据实际情况调整
-        return (x, y, z)
         
     def observe_sample_item(self):
         """观察高台小方桌上的样品物品"""

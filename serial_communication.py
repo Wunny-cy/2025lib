@@ -2,7 +2,7 @@ import serial
 import time
 
 class SerialCommunication:
-    def __init__(self, port='COM13', baudrate=115200):
+    def __init__(self, port='COM18', baudrate=115200):
         """
         初始化串口通信
         Args:
@@ -39,13 +39,13 @@ class SerialCommunication:
             self.serial.reset_input_buffer()
             
             # 发送握手消息
-            self.send_command("收到")
+            self.send_command("HELLO STM32\r\n")
             
             # 等待接收响应
             start_time = time.time()
-            while time.time() - start_time < 5:  # 最多等待5秒
+            while time.time() - start_time < 3:  # 最多等待X秒
                 response = self.read_response()
-                if response == "收到":
+                if response == "HAL_OK!":
                     print("与STM32握手成功")
                     return True
                 time.sleep(0.1)

@@ -6,8 +6,6 @@ class VisionDetector:
     def __init__(self):
         self.model = YOLO('best.pt')  # 使用预训练模型，您也可以使用自己训练的模型
         self.image_center_threshold = 50  # 图像中心区域的阈值（像素）
-        self.kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)) #闭运算卷积核
-        self.template_path = "5.jpg"
         
         # 打开摄像头
         self.cap = cv2.VideoCapture(0)
@@ -36,18 +34,14 @@ class VisionDetector:
                 if not ret:
                     raise Exception("无法读取图像")
                 
-                # 应用双边滤波
-                filtered_frame = cv2.bilateralFilter(frame, 9, 75, 75)
-                # 应用闭运算
-                filtered_frame = cv2.morphologyEx(filtered_frame, cv2.MORPH_CLOSE, self.kernel)
-                
-                cv2.imshow('Camera', filtered_frame)
+            
+                cv2.imshow('Camera', frame)
                 
                 # 按'q'键退出
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
                 
-            return filtered_frame
+            return frame
         
         finally:
             cv2.destroyAllWindows()
@@ -285,14 +279,10 @@ class VisionDetector:
                 ret, frame = self.cap.read()
                 if not ret:
                     raise Exception("无法读取图像")
-                # 应用双边滤波
-                filtered_frame = cv2.medianBlur(frame, 5)
-                # # 应用闭运算
-                # filtered_frame = cv2.morphologyEx(frame, cv2.MORPH_OPEN, self.kernel)
                 
                 
                 # 运行模型检测
-                results = self.model(filtered_frame)
+                results = self.model(frame)
                 
                 # 在图像上绘制检测结果
                 for result in results:
@@ -306,14 +296,14 @@ class VisionDetector:
                         class_name = result.names[class_id]
                         
                         # 绘制边界框
-                        cv2.rectangle(filtered_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
                         # 添加标签文本
                         label = f"{class_name}: {confidence:.2f}"
-                        cv2.putText(filtered_frame, label, (int(x1), int(y1-10)), 
+                        cv2.putText(frame, label, (int(x1), int(y1-10)), 
                                   cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 
                 # 显示图像
-                cv2.imshow('Model Test', filtered_frame)
+                cv2.imshow('Model Test', frame)
                 
                 # 按'q'键退出
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -328,12 +318,12 @@ def test():
     # 测试代码
     detector = VisionDetector()
     
-    # 获取图像
-    image = detector.get_camera_image()
+    # # 获取图像
+    # image = detector.get_camera_image()
     
-    # 检测样品
-    sample_item = detector.detect_item(image)
-    print(f"检测到的样品: {sample_item}")
+    # # 检测样品
+    # sample_item = detector.detect_item(image)
+    # print(f"检测到的样品: {sample_item}")
     
     # # # 检测饮料
     # target_drinks = ["yykx", "wz", "bs", "yld"]

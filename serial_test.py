@@ -3,7 +3,7 @@ import time
 
 # 配置串口参数
 # 请根据实际情况修改以下参数
-serial_port = 'COM10'  # 串口号，例如'COM3'或'/dev/ttyUSB0'
+serial_port = 'COM18'  # 串口号，例如'COM3'或'/dev/ttyUSB0'
 baud_rate = 115200      # 波特率，需要与STM32程序中设置的波特率一致
 timeout = 1           # 读超时设置
 
@@ -19,12 +19,18 @@ except serial.SerialException as e:
 if ser.is_open:
     try:
         # 发送数据到STM32
-        command = 'Hello STM32' + '\n'  # 假设STM32在接收到换行符后开始处理数据
-        ser.write(command.encode())  # 发送数据前需要编码为字节
+        command = 'HELLO STM32' + '\r\n'  # 假设STM32在接收到换行符后开始处理数据
+        ser.write(command.encode("utf-8"))  # 发送数据前需要编码为字节
+        time.sleep(0.1)
+        ser.write(command.encode("utf-8"))
+        time.sleep(0.1)
+        ser.write(command.encode("utf-8"))
+        time.sleep(0.1)
+        
         print(f"发送数据：{command}")
 
         # 稍作延时，等待STM32处理并返回数据
-        time.sleep(1)
+        time.sleep(5)
 
         # 读取STM32返回的数据
         while ser.in_waiting > 0:

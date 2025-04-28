@@ -5,12 +5,13 @@ import time
 
 class Robot:
     def __init__(self):
-        print("初始化")
+        print("初始化中。。。")
         self.target_drinks = ["yykx", "wz", "bs", "yld"]#["营养快线", "旺仔", "百事", "养乐多"]
         self.shelf_drinks = ["riosmt", "dpty", "cp", "jdb"]#["锐澳水蜜桃", "东鹏", "茶π柠檬红茶", "加多宝"]
         self.collected_items = []
         self.vision_detector = VisionDetector()
-        self.serial_comm = SerialCommunication(port='COM13',baudrate=115200)
+        self.serial_comm = SerialCommunication()
+        print("初始化完成")
         
         # 定义第三层的放置位置
         self.shelf_positions = [
@@ -231,9 +232,9 @@ class Robot:
         """执行移动任务"""
         try:
             # 前进指定距离
-            print("执行任务一：前进500单位")
-            self.serial_comm.send_command("FWD")
-            time.sleep(2)  # 等待移动完成
+            # print("执行任务一：前进500单位")
+            # self.serial_comm.send_command("FWD")
+            # time.sleep(2)  # 等待移动完成
             
             # # 后退指定距离
             # print("执行任务二：后退500单位")

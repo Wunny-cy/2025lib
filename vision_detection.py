@@ -84,7 +84,7 @@ class VisionDetector:
         center_x = (x1 + x2) / 2
         return abs(center_x - image_center[0]) < self.image_center_threshold 
 
-    def detect_item(self):
+    def detect_sample(self):
         """
         提取图像中心的物品并保存为模板图片
         Returns:
@@ -337,7 +337,7 @@ def test():
     # image = detector.get_camera_image()
     
     # # 检测样品
-    # sample_item = detector.detect_item(image)
+    # sample_item = detector.detect_sample(image)
     # print(f"检测到的样品: {sample_item}")
     
     # # # 检测饮料

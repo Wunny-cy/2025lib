@@ -80,20 +80,46 @@ class Robot:
 
     def move(self, command):
         """
-        微调机器人位置
+        控制机器人移动
         Args:
-            command: 移动指令，如 "X10" 或 "Y-10"
+            command: 移动指令，格式为 "X<距离>" 或 "Y<距离>"
+                    X轴：正值表示右移，负值表示左移
+                    Y轴：正值表示前进，负值表示后退
         """
         # 检查指令格式
         if not (command.startswith('X') or command.startswith('Y')):
             raise ValueError("指令必须以 X 或 Y 开头")
         
-        # 发送指令
-        self.serial_comm.send_command(command)
+        # 解析指令
+        axis = command[0]  # X 或 Y
+        try:
+            distance = int(command[1:])
+        except ValueError:
+            raise ValueError("距离必须是整数")
+            
+        # 验证距离范围
+        if not 1 <= abs(distance) <= 2000:
+            raise ValueError("移动距离必须在1-2000毫米之间")
+            
+        # 根据轴和方向发送对应指令
+        if axis == 'X':
+            if distance > 0:
+                # 右移
+                self.serial_comm.send_command(f"RGT {distance}")
+            else:
+                # 左移
+                self.serial_comm.send_command(f"LFT {abs(distance)}")
+        else:  # axis == 'Y'
+            if distance > 0:
+                # 前进
+                self.serial_comm.send_command(f"FWD {distance}")
+            else:
+                # 后退
+                self.serial_comm.send_command(f"BWD {abs(distance)}")
+                
         # 等待移动完成
         while True:
             response = self.serial_comm.read_response()
-            # 检查返回信息是否包含完成相关的关键词
             if "ok" in response.lower():
                 break
             time.sleep(0.1)
@@ -225,7 +251,7 @@ class Robot:
         # 获取图像
         image = self.vision_detector.get_camera_image()
         # 检测样品
-        sample_item = self.vision_detector.detect_item(image)
+        sample_item = self.vision_detector.detect_sample(image)
         if sample_item is None:
             raise Exception("未能检测到样品物品")
         return sample_item

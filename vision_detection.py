@@ -68,8 +68,22 @@ class VisionDetector:
         """
         x1, y1, x2, y2 = bbox
         center_x = (x1 + x2) / 2
-        return abs(center_x - image_center[0]) < self.image_center_threshold
+        center_y = (y1 + y2) / 2
+        return abs(center_x - image_center[0]) < self.image_center_threshold and abs(center_y - image_center[1]) < self.image_center_threshold
     
+    def is_in_Xcenter(self, bbox, image_center):
+        """
+        判断边界框是否在X轴方向上的中心区域
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+            image_center: 图像中心坐标 (center_x, center_y)
+        Returns:
+            bool: 是否在中心区域
+        """
+        x1, y1, x2, y2 = bbox
+        center_x = (x1 + x2) / 2
+        return abs(center_x - image_center[0]) < self.image_center_threshold 
+
     def detect_item(self):
         """
         提取图像中心的物品并保存为模板图片
@@ -264,7 +278,8 @@ class VisionDetector:
                         'position_2d': position_2d,
                         'position_3d': position_3d,
                         'confidence': confidence,
-                        'is_in_center': self.is_in_center(position_2d, image_center)
+                        'is_in_center': self.is_in_center(position_2d, image_center),
+                        'is_in_Xcenter': self.is_in_Xcenter(position_2d, image_center)
                     })
         
         return detected_drinks

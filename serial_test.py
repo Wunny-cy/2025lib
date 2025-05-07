@@ -3,7 +3,7 @@ import time
 
 # 配置串口参数
 # 请根据实际情况修改以下参数
-serial_port = 'COM18'  # 串口号，例如'COM3'或'/dev/ttyUSB0'
+serial_port = 'COM18'  # 串口号，例如'COM3'
 baud_rate = 115200      # 波特率，需要与STM32程序中设置的波特率一致
 timeout = 1           # 读超时设置
 

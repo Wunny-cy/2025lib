@@ -65,7 +65,7 @@ class SerialCommunication:
         """
         try:
             # 添加换行符确保命令完整
-            command = command + '\n'
+            command = command + '\r\n'
             self.serial.write(command.encode())
             time.sleep(0.1)  # 等待命令执行
         except Exception as e:

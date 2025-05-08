@@ -1,75 +1,90 @@
 from ultralytics import YOLO
 import cv2
 import numpy as np
+import torch
 
 class VisionDetector:
     def __init__(self):
-        self.model = YOLO('best.pt')  # 使用预训练模型，您也可以使用自己训练的模型
+        self.model = YOLO('best.pt', verbose=False)  
         self.image_center_threshold = 50  # 图像中心区域的阈值（像素）
+        
+        # 检查是否有可用的GPU
+        self.device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+        print(f"使用设备: {self.device}")
+        self.model.to(self.device)  # 将模型转移到指定的设备上
         
         # 打开摄像头
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
             raise Exception("无法打开摄像头")
         
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1500)  # 设置一个很大的值
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1000)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 5000)  # 设置一个很大的值
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 5000)
         
         # 获取实际设置的分辨率
         actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"摄像头分辨率: {actual_width}x{actual_height}")
         
-        # 测试模型检测效果
-        try:
-            while True:
-                ret, frame = self.cap.read()
-                if not ret:
-                    raise Exception("无法读取图像")
-                
-                # 获取图像中心点
-                height, width = frame.shape[:2]
-                center_x = width // 2
-                center_y = height // 2
-                
-                # 绘制中心区域矩形框（蓝色）
-                x1 = center_x - 120
-                y1 = center_y + 180
-                x2 = center_x + 120
-                y2 = center_y - 200
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
-                
-                # 运行模型检测
-                results = self.model(frame)
-                
-                # 在图像上绘制检测结果
-                for result in results:
-                    boxes = result.boxes
-                    for box in boxes:
-                        # 获取边界框坐标
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                        # 获取置信度和类别
-                        confidence = float(box.conf[0])
-                        class_id = int(box.cls[0])
-                        class_name = result.names[class_id]
-                        
-                        # 绘制边界框
-                        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                        # 添加标签文本
-                        label = f"{class_name}: {confidence:.2f}"
-                        cv2.putText(frame, label, (int(x1), int(y1-10)), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                
-                # 显示图像
-                cv2.imshow('Model Test', frame)
-                
-                # 按'q'键退出
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-                
-        finally:
-            cv2.destroyAllWindows()
-
+        # 创建可调整大小的窗口，并保持图像比例
+        cv2.namedWindow('Model Test', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+        cv2.resizeWindow('Model Test', 750, 1440)  # 设置初始窗口大小
+    
+    def start_detection(self):
+        """
+        开始实时检测并显示窗口
+        """
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                raise Exception("无法读取图像")
+            
+            # 逆时针旋转90度
+            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        
+            # 获取图像中心点
+            height, width = frame.shape[:2]
+            center_x = width // 2
+            center_y = height // 2
+            
+            # 绘制中心区域矩形框（蓝色）
+            x1 = center_x - 120
+            y1 = center_y + 180
+            x2 = center_x + 120
+            y2 = center_y - 200
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
+            
+            # 运行模型检测
+            results = self.model(frame)
+            
+            # 在图像上绘制检测结果
+            for result in results:
+                boxes = result.boxes
+                for box in boxes:
+                    # 获取边界框坐标
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    # 获取置信度和类别
+                    confidence = float(box.conf[0])
+                    class_id = int(box.cls[0])
+                    class_name = result.names[class_id]
+                    
+                    # 绘制边界框
+                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                    # 添加标签文本
+                    label = f"{class_name}: {confidence:.2f}"
+                    cv2.putText(frame, label, (int(x1), int(y1-10)), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            
+            # 显示图像
+            cv2.imshow('Model Test', frame)
+            
+            # 按'q'键退出
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        
+        # 释放资源
+        cv2.destroyAllWindows()
+    
     def get_camera_image(self):
         """
         获取摄像头图像并实时显示（最高分辨率）
@@ -84,7 +99,7 @@ class VisionDetector:
                     raise Exception("无法读取图像")
                 
             
-                cv2.imshow('Camera', frame)
+                # cv2.imshow('Camera', frame)
                 
                 # 按'q'键退出
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -244,7 +259,7 @@ class VisionDetector:
             cv2.imwrite('template.jpg', item_region)
             
             # 显示结果
-            cv2.imshow('Template', item_region)
+            # cv2.imshow('Template', item_region)
             cv2.waitKey(1)
             
             print(f"模板已保存为 template.jpg，尺寸: {item_region.shape}")
@@ -313,7 +328,7 @@ class VisionDetector:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
                 # 显示结果
-                cv2.imshow('Detection Result', frame)
+                # cv2.imshow('Detection Result', frame)
                 cv2.waitKey(1)  # 等待1毫秒
 
                 # 返回匹配区域的位置信息
@@ -354,7 +369,8 @@ class VisionDetector:
         Returns:
             list: 检测到的饮料位置列表
         """
-        results = self.model(image)
+        image_tensor = torch.from_numpy(image).to(self.device)
+        results = self.model(image_tensor)
         detected_drinks = []
         
         for result in results:
@@ -365,7 +381,7 @@ class VisionDetector:
                 class_name = result.names[class_id]
                 
                 if class_name in target_drinks and confidence > 0.5:
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    x1, y1, x2, y2 = box.xyxy[0].gpu(0).numpy()
                     position_2d = (x1, y1, x2, y2)
                     position_3d = self.convert_to_3d_coordinates(position_2d)
                     
@@ -383,20 +399,19 @@ class VisionDetector:
 def test():
     # 测试代码
     detector = VisionDetector()
+    detector.start_detection()  # 开始实时检测
     
-    # # 获取图像
+    # 获取图像
     # image = detector.get_camera_image()
     
     # # 检测样品
     # sample_item = detector.detect_sample(image)
     # print(f"检测到的样品: {sample_item}")
 
-    # # # 检测饮料
+    # # 检测饮料
     # target_drinks = ["yykx", "wz", "bs", "yld"]
     # detected_drinks = detector.detect_drinks(image, target_drinks)
     # print(f"检测到的饮料: {detected_drinks}")
 
-    detector.test_model()
-
 if __name__ == "__main__":
-    test() 
+    test()

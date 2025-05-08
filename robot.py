@@ -10,6 +10,8 @@ class Robot:
         self.collected_items = []
         self.vision_detector = VisionDetector()
         self.serial_comm = SerialCommunication()
+        self.DTG(1,1) #调
+        self.SVO(1, 100, 1000) #调
         print("初始化完成")
         
         # 定义第三层的放置位置
@@ -22,6 +24,14 @@ class Robot:
         
         # 定义置物筐位置
         self.basket_position = (500, 100, 150)  # 置物筐位置
+        
+        # 定义标签槽位置
+        self.label_positions = [
+            (100, 50, 200),   # 第一个标签槽位置
+            (200, 50, 200),   # 第二个标签槽位置
+            (300, 50, 200),   # 第三个标签槽位置
+            (400, 50, 200)    # 第四个标签槽位置
+        ]
     
     def DTG(self, id, dir):
         """
@@ -43,6 +53,7 @@ class Robot:
             angle: 转动角度 (0-180度)
             delay: 延迟时间 (毫秒)
         """
+        time.sleep(3)
         if id not in range(1, 9):
             raise ValueError("无效的舵机编号，必须在1-8之间")
         if not 0 <= angle <= 180:
@@ -150,11 +161,11 @@ class Robot:
         move_distance = item_center_x - image_center[0]
         
         # 根据距离移动机器人
-        if abs(move_distance) > 10:  # 设置一个阈值，避免抖动
+        if abs(move_distance) > 30:  # 设置一个阈值，避免抖动
             if move_distance > 0:
-                self.move("X5")  # 向右移动
+                self.move("X30")  # 向右移动
             else:
-                self.move("X-5")  # 向左移动
+                self.move("X-30")  # 向左移动
             time.sleep(0.5)
     
     def move_and_grab(self, position):
@@ -225,7 +236,7 @@ class Robot:
         控制机器人绕货架前进
         """
         # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
-        command = f"SQUARE"
+        command = f"FWD 100"
         self.serial_comm.send_command(command)
 
     def RT(self, angle):
@@ -287,7 +298,9 @@ class Robot:
         """从第二层收集指定饮料"""
         while len(self.collected_items) < len(self.target_drinks):
             # 控制机器人绕货架前进
+            print("前进")
             self.go_ahead()
+            self.RT(90)
             # 获取图像
             image = self.vision_detector.get_camera_image()
             # 检测饮料
@@ -300,17 +313,52 @@ class Robot:
                     self.collected_items.append(drink['name'])
                     break
             
+    def read_shelf_label(self, position_index):
+        """
+        读取指定位置的标签槽中的物品名称
+        Args:
+            position_index: 标签槽位置索引 (0-3)
+        Returns:
+            str: 识别到的物品名称，如果无法识别则返回 None
+        """
+        if not 0 <= position_index < len(self.label_positions):
+            raise ValueError("无效的标签槽位置索引")
+            
+        # 移动到标签槽位置
+        x, y, z = self.label_positions[position_index]
+        self.move_to_position(x, y)
+        time.sleep(1)  # 等待相机稳定
+        
+        # 获取图像并识别文字
+        image = self.vision_detector.get_camera_image()
+        label_text = self.vision_detector.recognize_text(image)
+        
+        if label_text:
+            # 将识别到的文字转换为物品代码
+            for drink in self.shelf_drinks:
+                if drink in label_text.lower():
+                    return drink
+                    
+        return None
+
     def handle_first_level_drinks(self):
         """处理第一层饮料的上架任务"""
         placed_count = 0
-        while placed_count < len(self.shelf_drinks):
+        while placed_count < len(self.shelf_positions):
+            # 读取当前标签槽的物品名称
+            target_drink = self.read_shelf_label(placed_count)
+            if not target_drink:
+                print(f"无法识别第 {placed_count + 1} 个标签槽的物品名称")
+                placed_count += 1
+                continue
+                
             # 获取图像
             image = self.vision_detector.get_camera_image()
             # 检测饮料
-            detected_drinks = self.vision_detector.detect_drinks(image, self.shelf_drinks)
+            detected_drinks = self.vision_detector.detect_drinks(image, [target_drink])
             
             for drink in detected_drinks:
-                if drink['is_in_center'] and placed_count < len(self.shelf_positions):
+                if drink['is_in_center']:
                     # 移动到饮料位置并抓取
                     self.move_and_grab(drink['position'])
                     # 移动到第三层指定位置并放置
@@ -318,69 +366,12 @@ class Robot:
                     placed_count += 1
                     break
             
+            time.sleep(0.5)  # 短暂延迟，避免过于频繁的检测
+
     def execute_task(self):
         """执行移动任务"""
         try:
-            # 前进指定距离
-            # print("执行任务一：前进500单位")
-            # self.serial_comm.send_command("FWD")
-            # time.sleep(2)  # 等待移动完成
-            
-            # # 后退指定距离
-            # print("执行任务二：后退500单位")
-            # self.serial_comm.send_command("BWD")
-            # time.sleep(2)
-            
-            # # 左移指定距离
-            # print("执行任务三：左移500单位")
-            # self.serial_comm.send_command("LFT")
-            # time.sleep(2)
-            
-            # # 右移指定距离
-            # print("执行任务四：右移500单位")
-            # self.serial_comm.send_command("RGT")
-            # time.sleep(2)
-            
-            # # 任务一
-            # print("执行任务五：前进300单位")
-            # self.serial_comm.send_command("TK1")
-            # time.sleep(1.5)
-            
-            # # 任务二
-            # print("执行任务六：后退300单位")
-            # self.serial_comm.send_command("TK2")
-            # time.sleep(1.5)
-            
-            # # 任务三
-            # print("执行任务七：左移300单位")
-            # self.serial_comm.send_command("TK3")
-            # time.sleep(1.5)
-            
-            # # 任务四
-            # print("执行任务八：右移300单位")
-            # self.serial_comm.send_command("TK4")
-            # time.sleep(1.5)
-            
-            # # 任务五
-            # print("执行任务九：前进200单位")
-            # self.serial_comm.send_command("TK5")
-            # time.sleep(1)
-            
-            # # 任务六
-            # print("执行任务十：后退200单位")
-            # self.serial_comm.send_command("TK6")
-            # time.sleep(1)
-            
-            # # 左转指定角度
-            # print("执行任务十一：左转90度")
-            # self.serial_comm.send_command("RTL")
-            # time.sleep(1)
-            
-            # # 右转指定角度
-            # print("执行任务十二：右转90度")
-            # self.serial_comm.send_command("RTR")
-            # time.sleep(1)
-            
+
             # 1. 识别初见物品
             # sample_item = self.observe_sample_item()
             # print(f"检测到的样品物品: {sample_item}")

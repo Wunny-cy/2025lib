@@ -12,14 +12,63 @@ class VisionDetector:
         if not self.cap.isOpened():
             raise Exception("无法打开摄像头")
         
-        # 获取摄像头支持的最高分辨率
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 10000)  # 设置一个很大的值
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 10000)
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1500)  # 设置一个很大的值
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1000)
         
         # 获取实际设置的分辨率
         actual_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"摄像头分辨率: {actual_width}x{actual_height}")
+        
+        # 测试模型检测效果
+        try:
+            while True:
+                ret, frame = self.cap.read()
+                if not ret:
+                    raise Exception("无法读取图像")
+                
+                # 获取图像中心点
+                height, width = frame.shape[:2]
+                center_x = width // 2
+                center_y = height // 2
+                
+                # 绘制中心区域矩形框（蓝色）
+                x1 = center_x - 120
+                y1 = center_y + 180
+                x2 = center_x + 120
+                y2 = center_y - 200
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
+                
+                # 运行模型检测
+                results = self.model(frame)
+                
+                # 在图像上绘制检测结果
+                for result in results:
+                    boxes = result.boxes
+                    for box in boxes:
+                        # 获取边界框坐标
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        # 获取置信度和类别
+                        confidence = float(box.conf[0])
+                        class_id = int(box.cls[0])
+                        class_name = result.names[class_id]
+                        
+                        # 绘制边界框
+                        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                        # 添加标签文本
+                        label = f"{class_name}: {confidence:.2f}"
+                        cv2.putText(frame, label, (int(x1), int(y1-10)), 
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+                # 显示图像
+                cv2.imshow('Model Test', frame)
+                
+                # 按'q'键退出
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+                
+        finally:
+            cv2.destroyAllWindows()
 
     def get_camera_image(self):
         """
@@ -57,32 +106,80 @@ class VisionDetector:
         height, width = image.shape[:2]
         return (width // 2, height // 2)
     
-    def is_in_center(self, bbox, image_center):
+    def is_in_center(self, bbox, image):
         """
-        判断边界框是否在图像中心区域
+        计算边界框相对于中心区域的偏移量
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
-            image_center: 图像中心坐标 (center_x, center_y)
+            image: 输入图像
         Returns:
-            bool: 是否在中心区域
+            tuple: (x_offset, y_offset) 偏移量
+                  x_offset: 正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+                  y_offset: 正值表示目标在中心区域下方，负值表示目标在中心区域上方
         """
-        x1, y1, x2, y2 = bbox
-        center_x = (x1 + x2) / 2
-        center_y = (y1 + y2) / 2
-        return abs(center_x - image_center[0]) < self.image_center_threshold and abs(center_y - image_center[1]) < self.image_center_threshold
+        # 获取图像中心点
+        height, width = image.shape[:2]
+        center_x = width // 2
+        center_y = height // 2
+        
+        # 定义中心区域
+        x1 = center_x - 120
+        y1 = center_y + 180
+        x2 = center_x + 120
+        y2 = center_y - 200
+        
+        # 计算目标物体的中心点
+        target_center_x = (bbox[0] + bbox[2]) / 2
+        target_center_y = (bbox[1] + bbox[3]) / 2
+        
+        # 计算相对于中心区域的偏移量
+        x_offset = 0
+        y_offset = 0
+        
+        # 计算水平偏移
+        if target_center_x < x1:
+            x_offset = target_center_x - x1  # 负值，表示在左侧
+        elif target_center_x > x2:
+            x_offset = target_center_x - x2  # 正值，表示在右侧
+            
+        # 计算垂直偏移
+        if target_center_y < y2:
+            y_offset = target_center_y - y2  # 负值，表示在上方
+        elif target_center_y > y1:
+            y_offset = target_center_y - y1  # 正值，表示在下方
+        
+        return (x_offset, y_offset)
     
-    def is_in_Xcenter(self, bbox, image_center):
+    def is_in_Xcenter(self, bbox, image):
         """
-        判断边界框是否在X轴方向上的中心区域
+        计算边界框相对于X轴中心区域的偏移量
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
-            image_center: 图像中心坐标 (center_x, center_y)
+            image: 输入图像
         Returns:
-            bool: 是否在中心区域
+            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
         """
-        x1, y1, x2, y2 = bbox
-        center_x = (x1 + x2) / 2
-        return abs(center_x - image_center[0]) < self.image_center_threshold 
+        # 获取图像中心点
+        width = image.shape[:1]
+        center_x = width // 2
+        
+        # 定义中心区域
+        x1 = center_x - 120
+        x2 = center_x + 120
+        
+        # 计算目标物体的中心点
+        target_center_x = (bbox[0] + bbox[2]) / 2
+        
+        # 计算相对于中心区域的偏移量
+        x_offset = 0
+        
+        # 计算水平偏移
+        if target_center_x < x1:
+            x_offset = target_center_x - x1  # 负值，表示在左侧
+        elif target_center_x > x2:
+            x_offset = target_center_x - x2  # 正值，表示在右侧
+            
+        return x_offset
 
     def detect_sample(self):
         """
@@ -259,7 +356,6 @@ class VisionDetector:
         """
         results = self.model(image)
         detected_drinks = []
-        image_center = self.get_image_center(image)
         
         for result in results:
             boxes = result.boxes
@@ -278,57 +374,12 @@ class VisionDetector:
                         'position_2d': position_2d,
                         'position_3d': position_3d,
                         'confidence': confidence,
-                        'is_in_center': self.is_in_center(position_2d, image_center),
-                        'is_in_Xcenter': self.is_in_Xcenter(position_2d, image_center)
+                        'is_in_center': self.is_in_center(position_2d, image),
+                        'is_in_Xcenter': self.is_in_Xcenter(position_2d, image)
                     })
         
         return detected_drinks
-    
-    
-    def test_model(self):
-        """
-        测试模型检测效果，实时显示检测结果
-        """
-        try:
-            while True:
-                ret, frame = self.cap.read()
-                if not ret:
-                    raise Exception("无法读取图像")
-                
-                
-                # 运行模型检测
-                results = self.model(frame)
-                
-                # 在图像上绘制检测结果
-                for result in results:
-                    boxes = result.boxes
-                    for box in boxes:
-                        # 获取边界框坐标
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                        # 获取置信度和类别
-                        confidence = float(box.conf[0])
-                        class_id = int(box.cls[0])
-                        class_name = result.names[class_id]
-                        
-                        # 绘制边界框
-                        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                        # 添加标签文本
-                        label = f"{class_name}: {confidence:.2f}"
-                        cv2.putText(frame, label, (int(x1), int(y1-10)), 
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                
-                # 显示图像
-                cv2.imshow('Model Test', frame)
-                
-                # 按'q'键退出
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
-                
-        finally:
-            self.cap.release()
-            cv2.destroyAllWindows()
 
-    
 def test():
     # 测试代码
     detector = VisionDetector()
@@ -339,7 +390,7 @@ def test():
     # # 检测样品
     # sample_item = detector.detect_sample(image)
     # print(f"检测到的样品: {sample_item}")
-    
+
     # # # 检测饮料
     # target_drinks = ["yykx", "wz", "bs", "yld"]
     # detected_drinks = detector.detect_drinks(image, target_drinks)

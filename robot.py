@@ -2,13 +2,15 @@ from vision_detection import VisionDetector
 from serial_communication import SerialCommunication
 import time
 
+
 class Robot:
-    def __init__(self):
+    def __init__(self, detector):
         print("初始化中。。。")
         self.target_drinks = ["yykx", "wz", "bs", "yld"]#["营养快线", "旺仔", "百事", "养乐多"]
         self.shelf_drinks = ["riosmt", "dpty", "cp", "jdb"]#["锐澳水蜜桃", "东鹏", "茶π柠檬红茶", "加多宝"]
         self.collected_items = []
-        self.vision_detector = VisionDetector()
+        self.vision_detector = detector #VisionDetector()
+        
         self.serial_comm = SerialCommunication()
         self.DTG(1,1) #调
         self.SVO(1, 100, 1000) #调
@@ -296,13 +298,11 @@ class Robot:
         
     def collect_second_level_drinks(self):
         """从第二层收集指定饮料"""
+        image = self.vision_detector.get_camera_image()# 获取图像
         while len(self.collected_items) < len(self.target_drinks):
             # 控制机器人绕货架前进
             print("前进")
             self.go_ahead()
-            self.RT(90)
-            # 获取图像
-            image = self.vision_detector.get_camera_image()
             # 检测饮料
             detected_drinks = self.vision_detector.detect_drinks(image, self.target_drinks)
             
@@ -311,7 +311,6 @@ class Robot:
                     # 移动到饮料位置并勾取
                     self.move_and_hook(drink['position'])
                     self.collected_items.append(drink['name'])
-                    break
             
     def read_shelf_label(self, position_index):
         """
@@ -370,6 +369,7 @@ class Robot:
 
     def execute_task(self):
         """执行移动任务"""
+        print("开始执行移动任务")
         try:
 
             # 1. 识别初见物品

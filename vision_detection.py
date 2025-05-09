@@ -1,3 +1,4 @@
+import threading
 from ultralytics import YOLO
 import cv2
 import numpy as np
@@ -29,86 +30,142 @@ class VisionDetector:
         # 创建可调整大小的窗口，并保持图像比例
         cv2.namedWindow('Model Test', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
         cv2.resizeWindow('Model Test', 750, 1440)  # 设置初始窗口大小
-    
+        
+        # 后续的初始化操作可以在这里执行
+        self.after_initialization()
+
     def start_detection(self):
-        """
-        开始实时检测并显示窗口
-        """
-        while True:
-            ret, frame = self.cap.read()
-            if not ret:
-                raise Exception("无法读取图像")
-            
-            # 逆时针旋转90度
-            frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
-        
-            # 获取图像中心点
-            height, width = frame.shape[:2]
-            center_x = width // 2
-            center_y = height // 2
-            
-            # 绘制中心区域矩形框（蓝色）
-            x1 = center_x - 120
-            y1 = center_y + 180
-            x2 = center_x + 120
-            y2 = center_y - 200
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
-            
-            # 运行模型检测
-            results = self.model(frame)
-            
-            # 在图像上绘制检测结果
-            for result in results:
-                boxes = result.boxes
-                for box in boxes:
-                    # 获取边界框坐标
-                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                    # 获取置信度和类别
-                    confidence = float(box.conf[0])
-                    class_id = int(box.cls[0])
-                    class_name = result.names[class_id]
-                    
-                    # 绘制边界框
-                    cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                    # 添加标签文本
-                    label = f"{class_name}: {confidence:.2f}"
-                    cv2.putText(frame, label, (int(x1), int(y1-10)), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-            
-            # 显示图像
-            cv2.imshow('Model Test', frame)
-            
-            # 按'q'键退出
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
-        
-        # 释放资源
-        cv2.destroyAllWindows()
-    
+        try:
+            while True:
+                ret, frame = self.cap.read()
+
+                if not ret:
+                    raise Exception("无法读取图像")
+                
+                # 逆时针旋转90度
+                frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+
+                # 获取图像中心点
+                height, width = frame.shape[:2]
+                center_x = width // 2
+                center_y = height // 2
+                
+                # 绘制中心区域矩形框（蓝色）
+                x1 = center_x - 120
+                y1 = center_y + 180
+                x2 = center_x + 120
+                y2 = center_y - 200
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
+                
+                # 计算九宫格分割线位置
+                # 水平分割线
+                top_y = 0
+                middle_y1 = y1
+                middle_y2 = y2
+                bottom_y = height
+                
+                # 垂直分割线
+                left_x = 0
+                middle_x1 = x1
+                middle_x2 = x2
+                right_x = width
+
+                # 绘制水平分割线
+                cv2.line(frame, (0, middle_y1), (width, middle_y1), (0, 255, 0), 1)
+                cv2.line(frame, (0, middle_y2), (width, middle_y2), (0, 255, 0), 1)
+                
+                # 绘制垂直分割线
+                cv2.line(frame, (middle_x1, 0), (middle_x1, height), (0, 255, 0), 1)
+                cv2.line(frame, (middle_x2, 0), (middle_x2, height), (0, 255, 0), 1)
+
+                # 生成九个区域的列表
+                regions = []
+                # 上排三个区域
+                regions.append((left_x, top_y, middle_x1, middle_y1))
+                regions.append((middle_x1, top_y, middle_x2, middle_y1))
+                regions.append((middle_x2, top_y, right_x, middle_y1))
+                
+                # 中排三个区域
+                regions.append((left_x, middle_y1, middle_x1, middle_y2))
+                regions.append((middle_x1, middle_y1, middle_x2, middle_y2))  # 中间区域
+                regions.append((middle_x2, middle_y1, right_x, middle_y2))
+                
+                # 下排三个区域
+                regions.append((left_x, middle_y2, middle_x1, bottom_y))
+                regions.append((middle_x1, middle_y2, middle_x2, bottom_y))
+                regions.append((middle_x2, middle_y2, right_x, bottom_y))
+                print(10)
+                # 运行模型检测
+                results = self.model(frame)
+
+                # 在图像上绘制检测结果
+                for result in results:
+                    boxes = result.boxes
+                    for box in boxes:
+                        # 获取边界框坐标
+                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                        # 获取置信度和类别
+                        confidence = float(box.conf[0])
+                        class_id = int(box.cls[0])
+                        class_name = result.names[class_id]
+                        
+                        # 绘制边界框
+                        cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
+                        # 添加标签文本
+                        label = f"{class_name}: {confidence:.2f}"
+                        cv2.putText(frame, label, (int(x1), int(y1-10)), 
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                print(11)
+                # 显示图像
+                cv2.imshow('Model Test', frame)
+                
+                # 按'q'键退出
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
+        finally:
+            # 释放资源
+            cv2.destroyAllWindows()
+            self.cap.release()
+
+    def after_initialization(self):
+        # 这里可以添加后续的初始化操作
+        print("执行后续初始化操作")
+        # 示例：获取图像
+        # image = self.get_camera_image()
+        # 示例：检测样品
+        # sample_item = self.detect_sample()
+        # print(f"检测到的样品: {sample_item}")
+        # 示例：检测饮料
+        # target_drinks = ["yykx", "wz", "bs", "yld"]
+        # detected_drinks = self.detect_drinks(image, target_drinks)
+        # print(f"检测到的饮料: {detected_drinks}")
+
     def get_camera_image(self):
         """
         获取摄像头图像并实时显示（最高分辨率）
         Returns:
             numpy.ndarray: 图像数据
         """
-        try:
+        ret, frame = self.cap.read()
+        return frame
+        # try:
             
-            while True:
-                ret, frame = self.cap.read()
-                if not ret:
-                    raise Exception("无法读取图像")
+        #     while True:
+        #         ret, frame = self.cap.read()
+        #         if not ret:
+        #             raise Exception("无法读取图像")
                 
             
-                # cv2.imshow('Camera', frame)
+        #         # cv2.imshow('Camera', frame)
                 
-                # 按'q'键退出
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+        #         # 按'q'键退出
+        #         if cv2.waitKey(1) & 0xFF == ord('q'):
+        #             break
                 
-            return frame
+        #     return frame
         
-        finally:
-            cv2.destroyAllWindows()
+        # finally:
+        #     cv2.destroyAllWindows()
     
     def get_image_center(self, image):
         """
@@ -399,19 +456,29 @@ class VisionDetector:
 def test():
     # 测试代码
     detector = VisionDetector()
-    detector.start_detection()  # 开始实时检测
-    
-    # 获取图像
-    # image = detector.get_camera_image()
-    
-    # # 检测样品
-    # sample_item = detector.detect_sample(image)
-    # print(f"检测到的样品: {sample_item}")
+    try:
+        while True:
+            # 这里不需要再调用 detector.start_detection()，因为已经在 __init__ 中启动了线程
+            cv2.waitKey(1)
+    except KeyboardInterrupt:
+        print("程序终止")
+    finally:
+        cv2.destroyAllWindows()
+        detector.cap.release()
 
-    # # 检测饮料
-    # target_drinks = ["yykx", "wz", "bs", "yld"]
-    # detected_drinks = detector.detect_drinks(image, target_drinks)
-    # print(f"检测到的饮料: {detected_drinks}")
+def test1():
+    detector = VisionDetector()
+    detector.start_detection()
 
 if __name__ == "__main__":
-    test()
+    # test()
+    # test1()
+
+    
+    print("1")
+        # 启动检测线程
+    detection_thread = threading.Thread(target=test1)
+    # detection_thread.daemon = True
+    detection_thread.start()
+    detection_thread.join()
+    print("2")

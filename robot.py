@@ -1,4 +1,4 @@
-from vision_detection import regions
+# from vision_detection import regions
 from vision_detection import VisionDetector
 from serial_communication import SerialCommunication
 import time
@@ -17,10 +17,10 @@ class Robot:
         self.DTG(1,1)
         print("DTG")
         # time.sleep(3)
-        self.SVO(1, 80, 1000) 
-        time.sleep(1.5)
-        self.SVO(1, 80, 1000) 
-        time.sleep(1.5)
+        # self.SVO(1, 80, 1000) 
+        # time.sleep(1.5)
+        # self.SVO(1, 80, 1000) 
+        # time.sleep(1.5)
         print("初始化完成")
         
         # 定义第三层的放置位置
@@ -92,32 +92,13 @@ class Robot:
         """
         执行勾取动作
         """
-        print(1)
-        self.SVO(1, 80, 1000)
-        print(2)
-        while True:
-            response = self.serial_comm.read_response()
-            if "ok" in response.lower():
-                break
-            time.sleep(0.1)
+        # print(1)
         self.SVO(1, 160, 1000)
-        while True:
-            response = self.serial_comm.read_response()
-            if "ok" in response.lower():
-                break
-            time.sleep(0.1)
-        while True:
-            response = self.serial_comm.read_response()
-            if "ok" in response.lower():
-                break
-            time.sleep(0.1)
+        self.serial_comm.check_ok()
         self.SVO(1, 80, 1000)
-        while True:
-            response = self.serial_comm.read_response()
-            if "ok" in response.lower():
-                break
-            time.sleep(0.1)
-
+        self.serial_comm.check_ok()
+        # print(2)
+        
     def move(self, command):
         """
         控制机器人移动
@@ -253,32 +234,27 @@ class Robot:
         self.ARM_release_item()
         time.sleep(1)
         
-    def move_and_hook(self):
-        """
-        移动到指定位置并勾取物品
-        Args:
-            position: 物品位置坐标 (x1, y1, x2, y2)
-        """
-        # # 移动机器人使物品位于中心
-        # self.move_robot_to_center_item(position)
-        # time.sleep(1)
-        # 勾取物品
-        self.hook_item()
-        time.sleep(1)
-
     def go_ahead(self):
+        """
+        控制机器人直行前进
+        """
+        # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
+        command = f"FWD 500 20"
+        self.serial_comm.send_command(command)
+        print("前进指令已发送")
+        self.serial_comm.check_ok()
+        print("前进指令已执行")
+
+    def go_around(self):
         """
         控制机器人绕货架前进
         """
         # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
-        command = f"FWD 50"
+        command = f"FWD 500 20"#
         self.serial_comm.send_command(command)
-        while True:
-            response = self.serial_comm.read_response()
-            if "ok" in response.lower():
-                break
-            time.sleep(0.1)
-        # self.serial_comm.read_response()
+        print("前进指令已发送")
+        self.serial_comm.check_ok()
+        print("前进指令已执行")
 
     def RT(self, angle):
         """
@@ -342,22 +318,22 @@ class Robot:
             # 控制机器人绕货架前进
             print("前进")
             self.go_ahead()
-            time.sleep(1)
+            time.sleep(2)
             # 检测饮料
             detected_drinks = self.vision_detector.detect_drinks(image, self.target_drinks)
-            print(1)
+            # print(1)
             print(detected_drinks)
             for drink in detected_drinks:
                 # self.move_to_position(drink["is_in_Xcenter"],0)
-                print(2)
+                # print(2)
                 # print(detected_drinks)
                 if drink['is_in_1'] and drink['name'] not in self.collected_items :
-                    print(20)
+                    # print(20)
                     # 移动到饮料位置并勾取
-                    self.move_and_hook()
-                    print(30)
+                    self.hook_item()
+                    # print(30)
                     self.collected_items.append(drink['name'])
-                    print(40)
+                    # print(40)
                     print(f"已收集饮料: {self.collected_items}")
 
     def read_shelf_label(self, position_index):
@@ -442,3 +418,7 @@ class Robot:
         finally:
             # 关闭串口连接
             self.serial_comm.close()
+
+if __name__ == "__main__":
+    robot = Robot()
+    robot.hook_item()

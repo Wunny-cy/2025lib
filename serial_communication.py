@@ -71,8 +71,16 @@ class SerialCommunication:
             time.sleep(0.1)  # 等待命令执行
         except Exception as e:
             raise Exception(f"发送命令失败: {str(e)}")
-        
-    
+
+    def check_ok(self):
+         while True:
+            response = self.read_response()
+            print(response)
+            if response != None and "ok" in response.lower():
+                print(222)
+                break
+            time.sleep(0.1)
+
     def read_response(self):
         """
         读取机器人返回的数据
@@ -83,6 +91,7 @@ class SerialCommunication:
         try:
             if self.serial.in_waiting:
                 response = self.serial.readline().decode().strip()
+                print(f"收到响应: {response}")
                 return response
             return None
         except Exception as e:

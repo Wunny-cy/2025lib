@@ -4,7 +4,7 @@ from ultralytics import YOLO
 import cv2
 import numpy as np
 import torch
-from paddleocr import PaddleOCR
+# from paddleocr import PaddleOCR
 
 regions = []
 class VisionDetector:
@@ -61,7 +61,7 @@ class VisionDetector:
                 # cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
                 
                 # 绘制第二层拨杆区域矩形框（蓝色）
-                x11 =20
+                x11 =30
                 y11 = 1000
                 x12 = 230
                 y12 = 1500
@@ -213,27 +213,27 @@ class VisionDetector:
         cv2.imwrite(image_path, frame)
         return image_path
     
-    def recognize_shopping_list(self,image_path):
-        ocr = PaddleOCR(use_angle_cls=True)  # 启用角度分类
-        result = ocr.ocr(image_path)
-        if not result:  # 现在这个检查只确保result不是空列表
-            print("没有识别到任何内容")
-            return []
+    # def recognize_shopping_list(self,image_path):
+    #     ocr = PaddleOCR(use_angle_cls=True)  # 启用角度分类
+    #     result = ocr.ocr(image_path)
+    #     if not result:  # 现在这个检查只确保result不是空列表
+    #         print("没有识别到任何内容")
+    #         return []
 
-        recognized_items = []  # 存储识别结果的数组
-        if result is not None:  # 添加检查确保result不是None
-            for line in result:
-                if line:  # 确保line本身不为空
-                    for element in line:
-                        if isinstance(element, list) and len(element) > 1:
-                            box = element[0]  # 包围盒坐标
-                            text = element[1][0]  # 识别的文本
-                            # 计算中心坐标
-                            center_x = sum([point[0] for point in box]) / 4
-                            center_y = sum([point[1] for point in box]) / 4
-                            # 将文本和中心坐标存储为元组，并添加到数组中
-                            recognized_items.append([text, (center_x, center_y)])
-        return recognized_items
+    #     recognized_items = []  # 存储识别结果的数组
+    #     if result is not None:  # 添加检查确保result不是None
+    #         for line in result:
+    #             if line:  # 确保line本身不为空
+    #                 for element in line:
+    #                     if isinstance(element, list) and len(element) > 1:
+    #                         box = element[0]  # 包围盒坐标
+    #                         text = element[1][0]  # 识别的文本
+    #                         # 计算中心坐标
+    #                         center_x = sum([point[0] for point in box]) / 4
+    #                         center_y = sum([point[1] for point in box]) / 4
+    #                         # 将文本和中心坐标存储为元组，并添加到数组中
+    #                         recognized_items.append([text, (center_x, center_y)])
+    #     return recognized_items
     
     def replace_text_with_numbers(self,items):
         for i in range(len(items)):
@@ -377,7 +377,7 @@ class VisionDetector:
         # center_x = width // 2
         x1, y1, x2, y2 = bbox
         # 定义中心区域
-        x11 =20
+        x11 =0
         x12 = 230
         
         # 计算目标物体的中心点
@@ -394,7 +394,7 @@ class VisionDetector:
             x_offset = target_center_x - x12  # 正值，表示在右侧
             # return False
             
-        print("x_offset:", x_offset)
+        # print("x_offset:", x_offset)
         return x_offset
 
     def detect_sample(self):

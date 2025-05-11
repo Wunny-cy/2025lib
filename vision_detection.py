@@ -1,12 +1,15 @@
-import threading
+import os
+os.environ['YOLO_VERBOSE'] = str(False)
 from ultralytics import YOLO
 import cv2
 import numpy as np
 import torch
+from paddleocr import PaddleOCR
 
+regions = []
 class VisionDetector:
     def __init__(self):
-        self.model = YOLO('best.pt', verbose=False)  
+        self.model = YOLO('3.pt')  
         self.image_center_threshold = 50  # 图像中心区域的阈值（像素）
         
         # 检查是否有可用的GPU
@@ -55,8 +58,22 @@ class VisionDetector:
                 y1 = center_y + 180
                 x2 = center_x + 120
                 y2 = center_y - 200
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
+                # cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 2)  # 蓝色矩形框
                 
+                # 绘制第二层拨杆区域矩形框（蓝色）
+                x11 =20
+                y11 = 1000
+                x12 = 230
+                y12 = 1500
+                cv2.rectangle(frame, (x11, y11), (x12, y12), (255, 0, 0), 5)  # 蓝色矩形框
+
+                # 绘制下层区域矩形框（蓝色）
+                # x21 = 550
+                # y21 = 1460
+                # x22 = 880
+                # y22 = 1080
+                # cv2.rectangle(frame, (x21, y21), (x22, y22), (255, 0, 0), 2)  # 蓝色矩形框
+
                 # 计算九宫格分割线位置
                 # 水平分割线
                 top_y = 0
@@ -71,15 +88,16 @@ class VisionDetector:
                 right_x = width
 
                 # 绘制水平分割线
-                cv2.line(frame, (0, middle_y1), (width, middle_y1), (0, 255, 0), 1)
-                cv2.line(frame, (0, middle_y2), (width, middle_y2), (0, 255, 0), 1)
+                cv2.line(frame, (0, middle_y1), (width, middle_y1), (0, 255, 0), 3)
+                cv2.line(frame, (0, middle_y2), (width, middle_y2), (0, 255, 0), 3)
                 
                 # 绘制垂直分割线
-                cv2.line(frame, (middle_x1, 0), (middle_x1, height), (0, 255, 0), 1)
-                cv2.line(frame, (middle_x2, 0), (middle_x2, height), (0, 255, 0), 1)
+                cv2.line(frame, (middle_x1, 0), (middle_x1, height), (0, 255, 0), 3)
+                cv2.line(frame, (middle_x2, 0), (middle_x2, height), (0, 255, 0), 3)
 
                 # 生成九个区域的列表
-                regions = []
+                global  regions
+                regions.clear()
                 # 上排三个区域
                 regions.append((left_x, top_y, middle_x1, middle_y1))
                 regions.append((middle_x1, top_y, middle_x2, middle_y1))
@@ -94,9 +112,8 @@ class VisionDetector:
                 regions.append((left_x, middle_y2, middle_x1, bottom_y))
                 regions.append((middle_x1, middle_y2, middle_x2, bottom_y))
                 regions.append((middle_x2, middle_y2, right_x, bottom_y))
-                print(10)
                 # 运行模型检测
-                results = self.model(frame)
+                results = self.model.predict(frame)
 
                 # 在图像上绘制检测结果
                 for result in results:
@@ -115,7 +132,6 @@ class VisionDetector:
                         label = f"{class_name}: {confidence:.2f}"
                         cv2.putText(frame, label, (int(x1), int(y1-10)), 
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
-                print(11)
                 # 显示图像
                 cv2.imshow('Model Test', frame)
                 
@@ -140,6 +156,23 @@ class VisionDetector:
         # detected_drinks = self.detect_drinks(image, target_drinks)
         # print(f"检测到的饮料: {detected_drinks}")
 
+    def convert_np_floats(self,obj):
+        """
+        将numpy.float32类型转换为Python float类型
+        Returns:
+            Python float类型
+        """
+        if isinstance(obj, np.float32):
+            return float(obj)
+        elif isinstance(obj, tuple):
+            return tuple(self.convert_np_floats(item) for item in obj)
+        elif isinstance(obj, list):
+            return [self.convert_np_floats(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {k: self.convert_np_floats(v) for k, v in obj.items()}
+        else:
+            return obj
+
     def get_camera_image(self):
         """
         获取摄像头图像并实时显示（最高分辨率）
@@ -147,6 +180,7 @@ class VisionDetector:
             numpy.ndarray: 图像数据
         """
         ret, frame = self.cap.read()
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
         return frame
         # try:
             
@@ -166,6 +200,83 @@ class VisionDetector:
         
         # finally:
         #     cv2.destroyAllWindows()
+
+    def save_camera_image(self):
+        """
+        保存摄像头图像
+        Returns:
+            图像路径
+        """
+        ret, frame = self.cap.read()
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)
+        image_path = 'captured_image.png'
+        cv2.imwrite(image_path, frame)
+        return image_path
+    
+    def recognize_shopping_list(self,image_path):
+        ocr = PaddleOCR(use_angle_cls=True)  # 启用角度分类
+        result = ocr.ocr(image_path)
+        if not result:  # 现在这个检查只确保result不是空列表
+            print("没有识别到任何内容")
+            return []
+
+        recognized_items = []  # 存储识别结果的数组
+        if result is not None:  # 添加检查确保result不是None
+            for line in result:
+                if line:  # 确保line本身不为空
+                    for element in line:
+                        if isinstance(element, list) and len(element) > 1:
+                            box = element[0]  # 包围盒坐标
+                            text = element[1][0]  # 识别的文本
+                            # 计算中心坐标
+                            center_x = sum([point[0] for point in box]) / 4
+                            center_y = sum([point[1] for point in box]) / 4
+                            # 将文本和中心坐标存储为元组，并添加到数组中
+                            recognized_items.append([text, (center_x, center_y)])
+        return recognized_items
+    
+    def replace_text_with_numbers(self,items):
+        for i in range(len(items)):
+            item = items[i]
+            if item[0] == 'I':
+                items[i][0] = 1
+            elif item[0] == '1':
+                items[i][0] = 1
+            elif item[0] == '2':
+                items[i][0] = 2
+            elif item[0] == '7':
+                items[i][0] = 2
+            elif item[0] == '乙':
+                items[i][0] = 2
+            elif item[0] == '3':
+                items[i][0] = 3
+            elif item[0] == '8':
+                items[i][0] = 3
+        return items
+    
+    def final(self, items, items_keywords):
+        """
+        处理识别结果，将识别结果中的数字与物品名称对应
+        Args:
+            items: 识别结果，每个元素为 (物品名称, 中心坐标)
+        Returns:
+            list: 最终结果，每个元素为 (物品名称, 数量)
+        """
+        final_items = []  # 定义一个空列表，用于存储最终结果
+        for i in range(len(items)):
+            item_name = items[i][0]  # 访问第一个元素（物品名称）
+            item_y = items[i][1][1]  # 访问第二个元素（坐标）
+            if item_name in items_keywords :
+                for j in range(len(items)):
+                    num_name = items[j][0]  # 访问第一个元素（物品名称）
+                    num_y = items[j][1][1]
+                    if abs(num_y - item_y) < 15 and isinstance(num_name, int):
+                        final_items.append((item_name, num_name))
+                    else:
+                        final_items.append((item_name, 1))
+                        break
+        return final_items
+
     
     def get_image_center(self, image):
         """
@@ -232,9 +343,8 @@ class VisionDetector:
             float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
         """
         # 获取图像中心点
-        width = image.shape[:1]
+        height, width = image.shape[:2]  # 获取图像的高度和宽度
         center_x = width // 2
-        
         # 定义中心区域
         x1 = center_x - 120
         x2 = center_x + 120
@@ -251,6 +361,40 @@ class VisionDetector:
         elif target_center_x > x2:
             x_offset = target_center_x - x2  # 正值，表示在右侧
             
+        return x_offset
+    
+    def is_in_1(self, bbox, image):
+        """
+        计算边界框相对于X轴中心区域的偏移量
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+            image: 输入图像
+        Returns:
+            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+        """
+        # 获取图像中心点
+        # height, width = image.shape[:2]  # 获取图像的高度和宽度
+        # center_x = width // 2
+        x1, y1, x2, y2 = bbox
+        # 定义中心区域
+        x11 =20
+        x12 = 230
+        
+        # 计算目标物体的中心点
+        target_center_x = (x1 + x2) / 2
+        
+        # 计算相对于中心区域的偏移量
+        x_offset = 0
+        
+        # 计算水平偏移
+        if target_center_x < x11:
+            x_offset = target_center_x - x11  # 负值，表示在左侧
+            # return True
+        elif target_center_x > x12:
+            x_offset = target_center_x - x12  # 正值，表示在右侧
+            # return False
+            
+        print("x_offset:", x_offset)
         return x_offset
 
     def detect_sample(self):
@@ -426,47 +570,62 @@ class VisionDetector:
         Returns:
             list: 检测到的饮料位置列表
         """
-        image_tensor = torch.from_numpy(image).to(self.device)
-        results = self.model(image_tensor)
+        # image_tensor = torch.from_numpy(image).to(self.device)
+        results = self.model.predict(source=image)
         detected_drinks = []
-        
+
         for result in results:
             boxes = result.boxes
+            # print(boxes)
             for box in boxes:
                 confidence = float(box.conf[0])
                 class_id = int(box.cls[0])
                 class_name = result.names[class_id]
+                # print(class_name)
                 
                 if class_name in target_drinks and confidence > 0.5:
-                    x1, y1, x2, y2 = box.xyxy[0].gpu(0).numpy()
+                    x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
+                    # x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                     position_2d = (x1, y1, x2, y2)
-                    position_3d = self.convert_to_3d_coordinates(position_2d)
+                    is_in_center = self.is_in_center(position_2d, image)
+                    is_in_Xcenter = self.is_in_Xcenter(position_2d, image)
+                    is_in_1 = self.is_in_1(position_2d, image)
+                    if is_in_1 < 3:
+                        t1=True
+                    else:
+                        t1=False
                     
-                    detected_drinks.append({
+                    detected_drink = {
                         'name': class_name,
                         'position_2d': position_2d,
-                        'position_3d': position_3d,
                         'confidence': confidence,
-                        'is_in_center': self.is_in_center(position_2d, image),
-                        'is_in_Xcenter': self.is_in_Xcenter(position_2d, image)
-                    })
-        
+                        'is_in_center': is_in_center,
+                        'is_in_Xcenter': is_in_Xcenter,
+                        'is_in_1': t1
+                    }
+                    # 递归转换所有np.float32类型
+                    converted_drink = self.convert_np_floats(detected_drink)
+                    detected_drinks.append(converted_drink)
         return detected_drinks
 
-def test():
-    # 测试代码
-    detector = VisionDetector()
-    try:
-        while True:
-            # 这里不需要再调用 detector.start_detection()，因为已经在 __init__ 中启动了线程
-            cv2.waitKey(1)
-    except KeyboardInterrupt:
-        print("程序终止")
-    finally:
-        cv2.destroyAllWindows()
-        detector.cap.release()
+# def test():
+#     # 测试代码
+#     detector = VisionDetector()
+#     try:
+#         while True:
+#             # 这里不需要再调用 detector.start_detection()，因为已经在 __init__ 中启动了线程
+#             cv2.waitKey(1)
+#     except KeyboardInterrupt:
+#         print("程序终止")
+#     finally:
+#         cv2.destroyAllWindows()
+#         detector.cap.release()
 
-def test1():
+# def test1():
+#     detector = VisionDetector()
+#     detector.start_detection()
+
+def test2():
     detector = VisionDetector()
     detector.start_detection()
 
@@ -475,10 +634,11 @@ if __name__ == "__main__":
     # test1()
 
     
-    print("1")
-        # 启动检测线程
-    detection_thread = threading.Thread(target=test1)
-    # detection_thread.daemon = True
-    detection_thread.start()
-    detection_thread.join()
-    print("2")
+    # print("1")
+    #     # 启动检测线程
+    # detection_thread = threading.Thread(target=test1)
+    # # detection_thread.daemon = True
+    # detection_thread.start()
+    # detection_thread.join()
+    # print("2")
+    test2()

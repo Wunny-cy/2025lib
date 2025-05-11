@@ -4,20 +4,17 @@ import time
 from vision_detection import VisionDetector
 
 detector = None
-def test():
+def show():
     global detector
     detector = VisionDetector()
     detector.start_detection()
 
-
 def main():
     global detector
-    
-    detection_thread = threading.Thread(target=test)
-    # detection_thread.daemon = True
+    detection_thread = threading.Thread(target=show)
     detection_thread.start()
-    while detector == None:
-        time.sleep(1)    # robot.vision_detector.start_detection()
+    while detector == None: #等待初始化完成
+        time.sleep(0.1)    
     robot = Robot(detector)
     robot.execute_task()
 

@@ -95,3 +95,8 @@ class SerialCommunication:
         if self.serial.is_open:
             self.serial.close()
             print("串口连接已关闭") 
+
+if __name__ == "__main__":
+    ser = SerialCommunication()
+    ser.send_command("HELLO STM32\r\n")
+    ser.close()

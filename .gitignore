@@ -2,7 +2,9 @@
 *.pt
 
 # 忽略特定目录下的所有文件
-/__pycache__
+__pycache__/
 
 # 忽略某个具体文件
 test.py
+
+*.pyc

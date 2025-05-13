@@ -16,6 +16,7 @@ def main():
     while detector == None: #等待初始化完成
         time.sleep(0.1)    
     robot = Robot(detector)
+    robot.DTG(1,1)
     robot.execute_task()
 
     detection_thread.join()

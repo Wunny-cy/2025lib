@@ -1,9 +1,6 @@
-# from vision_detection import regions
-from vision_detection import VisionDetector
+from vision_detection import regions
 from serial_communication import SerialCommunication
 import time
-# from main import detector
-
 
 class Robot:
     def __init__(self,detector):
@@ -17,7 +14,7 @@ class Robot:
         self.DTG(1,1)
         print("DTG")
         # time.sleep(3)
-        # self.SVO(1, 80, 1000) 
+        self.SVO(1, 95, 1000) 
         # time.sleep(1.5)
         # self.SVO(1, 80, 1000) 
         # time.sleep(1.5)
@@ -52,6 +49,9 @@ class Robot:
         if id not in [1, 2, 3, 4] or dir not in [0, 1]:
             raise ValueError("无效的电推杆编号或方向")
         self.serial_comm.send_command(f"DTG {id} {dir}")  # 控制电推杆
+        print(f"DTG{id}指令已发送")
+        self.serial_comm.check_ok()
+        print(f"DTG{id}指令已执行")
         time.sleep(1)
 
     def SVO(self, id, angle, delay):
@@ -71,41 +71,58 @@ class Robot:
             raise ValueError("延迟时间不能为负数")
             
         self.serial_comm.send_command(f"SVO {id} {angle} {delay}")  # 控制舵机
+        print(f"SVO {id} {angle}指令已发送")
+        self.serial_comm.check_ok()
+        print(f"SVO {id} {angle}指令已执行")
 
-    def ARM_grab_item(self):
+    def arm_grab_item(self):
         """
         执行抓取动作
         """
-        self.serial_comm.send_command("M3")  # 打开夹爪
-        time.sleep(1)
-        self.serial_comm.send_command("M4")  # 关闭夹爪
-        time.sleep(1)
+        self.serial_comm.send_command("SVO 3 60 1000")  # 关闭夹爪
+        print("关闭夹爪")
+        self.serial_comm.check_ok()
+        print(f"关闭夹爪指令已执行")
 
-    def ARM_release_item(self):
+    def arm_release_item(self):
         """
         执行释放动作
         """
-        self.serial_comm.send_command("M3")  # 打开夹爪
-        time.sleep(1)
+        self.serial_comm.send_command("SVO 3 0 1000")  # 打开夹爪
+        print("打开夹爪")
+        self.serial_comm.check_ok()
+        print(f"打开夹爪指令已执行")
 
-    def hook_item(self):
+    def hook_item1(self):
         """
         执行勾取动作
         """
         # print(1)
         self.SVO(1, 160, 1000)
-        self.serial_comm.check_ok()
+        time.sleep(1.5)
         self.SVO(1, 80, 1000)
+        # print(2)
+
+    def hook_item2(self):
+        """
+        执行勾取动作
+        """
+        # print(1)
+        self.SVO(2, 160, 1000)
+        self.serial_comm.check_ok()
+        self.SVO(2, 80, 1000)
         self.serial_comm.check_ok()
         # print(2)
+
         
+
     def move(self, command):
         """
         控制机器人移动
         Args:
             command: 移动指令，格式为 "X<距离>" 或 "Y<距离>"
-                    X轴：正值表示右移，负值表示左移
-                    Y轴：正值表示前进，负值表示后退
+                    X轴：正值表示前进，负值表示后退
+                    Y轴：正值表示左移，负值表示右移
         """
         # 检查指令格式
         if not (command.startswith('X') or command.startswith('Y')):
@@ -119,31 +136,37 @@ class Robot:
             raise ValueError("距离必须是整数")
             
         # 验证距离范围
-        if not 1 <= abs(distance) <= 2000:
-            raise ValueError("移动距离必须在1-2000毫米之间")
+        if not 1 <= abs(distance) <= 1000:
+            raise ValueError("移动距离必须在1-1000毫米之间")
             
         # 根据轴和方向发送对应指令
         if axis == 'X':
             if distance > 0:
-                # 右移
-                self.serial_comm.send_command(f"RGT {distance}")
-            else:
-                # 左移
-                self.serial_comm.send_command(f"LFT {abs(distance)}")
-        else:  # axis == 'Y'
-            if distance > 0:
                 # 前进
-                self.serial_comm.send_command(f"FWD {distance}")
+                self.serial_comm.send_command(f"ZX {distance}")
+                print(f"ZX{distance}指令已发送")
+                self.serial_comm.check_ok()
+                print(f"前进{distance}已执行")
             else:
                 # 后退
-                self.serial_comm.send_command(f"BWD {abs(distance)}")
-                
-        # 等待移动完成
-        while True:
-            response = self.serial_comm.read_response()
-            if "ok" in response.lower():
-                break
-            time.sleep(0.1)
+                self.serial_comm.send_command(f"HT {abs(distance)}")
+                print(f"HT{distance}指令已发送")
+                self.serial_comm.check_ok()
+                print(f"后退{distance}已执行")
+        else:  # axis == 'Y'
+            
+            if distance < 0:
+                # 右移
+                self.serial_comm.send_command(f"YY {distance}")
+                print(f"YY{distance}指令已发送")
+                self.serial_comm.check_ok()
+                print(f"右移{distance}已执行")
+            else:
+                # 左移
+                self.serial_comm.send_command(f"ZY {abs(distance)}")
+                print(f"ZY{distance}指令已发送")
+                self.serial_comm.check_ok()
+                print(f"左移{distance}已执行")
 
     def move_to_position(self, x, y):
         """
@@ -153,65 +176,45 @@ class Robot:
             y: Y坐标
         """
         # 先移动X坐标
-        self.serial_comm.send_command(f"FWD {x}")
+        self.move(f"X{x}")
         # 再移动Y坐标
-        self.serial_comm.send_command(f"FWD {x}")
-
-    def move_robot_to_center_item(self, position):
-        """
-        移动机器人使物品位于图像中心
-        Args:
-            position: 物品位置坐标 (x1, y1, x2, y2)
-        """
-        marks = regions[5]
-        # 中心区域坐标
-        x3 = marks(0) - 120
-        y3 = marks(1) + 180
-        x4 = marks(2) + 120
-        y4 = marks(3) - 200
-        image_center = self.vision_detector.get_image_center(self.vision_detector.get_camera_image())
-        
-        x1, y1, x2, y2 = position
-
-        # 计算需要移动的距离
-        move_distance = x3 - x1
-        
-        # 根据距离移动机器人
-        if abs(move_distance) > 30:  # 设置一个阈值，避免抖动
-            if move_distance > 0:
-                self.move("X30")  # 向右移动
-            else:
-                self.move("X-30")  # 向左移动
-            time.sleep(0.5)
+        self.move(f"Y{y}")
     
-    def move_and_grab(self, position):
+    def arm_up(self):
+        print(1)#待修改
+
+    def arm_grab(self):
         """
-        移动到指定位置并用机械臂抓取物品
+        用机械臂抓取物品
         Args:
             position: 物品位置坐标 (x1, y1, x2, y2)
         """
-        # 移动机器人使物品位于中心
-        self.move_robot_to_center_item(position)
-        
-        # 获取物品的3D坐标
-        x, y, z = self.vision_detector.convert_to_3d_coordinates(position)
-        # 伸出夹爪
-        self.serial_comm.send_command("M4")
-        # 移动到物品上方
-        self.move_to_position(x, y)
-        time.sleep(1)
-        # 下降到物品位置
-        self.move_to_position(x, y)
-        time.sleep(1)
+        # 伸出电推杆
+        self.DTG(3, 1)
+        # # 伸出夹爪
+        # self.serial_comm.send_command("M4")
+        # # 移动到物品上方
+        # self.move_to_position(x, y)
+        # time.sleep(1)
+        # # 下降到物品位置
+        # self.move_to_position(x, y)
+        # time.sleep(1)
+
         # 抓取物品
-        self.ARM_grab_item()
-        # 抬起物品
-        self.move_to_position(x, y)
-        # 收回夹爪
-        self.serial_comm.send_command("M3")
-        time.sleep(1)
+        self.arm_grab_item()
+        # # 抬起物品
+        # self.move_to_position(x, y)
+        # 收回电推杆
+        self.DTG(3, 0)
         
-    def move_and_place(self, position):
+    def arm_collect(self):
+        self.DTG(3, 1)
+        self.arm_grab_item()
+        self.DTG(3, 0)  
+        self.arm_release_item()
+
+
+    def arm_up_and_place(self):
         """
         移动到指定位置并放置物品
         Args:
@@ -219,7 +222,7 @@ class Robot:
         """
         x, y, z = position
         # 伸出夹爪
-        self.ARM_grab_item()
+        self.arm_grab_item()
         # 移动到目标位置上方
         self.move_to_position(x, y)
         time.sleep(1)
@@ -227,34 +230,46 @@ class Robot:
         self.move_to_position(x, y)
         time.sleep(1)
         # 释放物品
-        self.ARM_release_item()
+        self.arm_release_item()
         # 抬起机械臂
         self.move_to_position(x, y)
         # 收回夹爪
-        self.ARM_release_item()
+        self.arm_release_item()
         time.sleep(1)
         
-    def go_ahead(self):
+    
+    # def go_ahead(self):
+    #     """
+    #     控制机器人直行前进
+    #     """
+    #     # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
+    #     command = f"FWD 500 20"
+    #     self.serial_comm.send_command(command)
+    #     print("前进指令已发送")
+    #     self.serial_comm.check_ok()
+    #     print("前进指令已执行")
+
+    def travel(self):
         """
-        控制机器人直行前进
+        控制机器人绕货架前进
         """
         # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
-        command = f"FWD 500 20"
+        command = f"ZX 500"
         self.serial_comm.send_command(command)
         print("前进指令已发送")
         self.serial_comm.check_ok()
         print("前进指令已执行")
 
-    def go_around(self):
+    def stop(self):
         """
-        控制机器人绕货架前进
+        控制机器人停止运动
         """
         # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
-        command = f"FWD 500 20"#
+        command = f"STOP"#待修改
         self.serial_comm.send_command(command)
-        print("前进指令已发送")
+        print("停止已发送")
         self.serial_comm.check_ok()
-        print("前进指令已执行")
+        print("已停止")
 
     def RT(self, angle):
         """
@@ -289,52 +304,71 @@ class Robot:
         collected_count = 0
         while collected_count < 2:
             # 检测与模板匹配的物品
-            result = self.vision_detector.detect_sample_item()
+            the_item = self.vision_detector.detect_sample_item()
             
-            if result and result['confidence'] > 0.5:  # 设置置信度阈值
-                x_min, y_min, x_max, y_max = result['position']
+            if the_item and the_item['confidence'] > 0.5:  # 设置置信度阈值
+                x1, y1, x2, y2 = the_item['position']
                 # 计算物品中心位置
-                center_x = (x_min + x_max) // 2
-                center_y = (y_min + y_max) // 2
-                
-                # 检查物品是否在图像中心区域
-                if abs(center_x - self.vision_detector.get_image_center()[0]) < self.vision_detector.image_center_threshold:
-                    # 转换为3D坐标
-                    position_3d = self.vision_detector.convert_to_3d_coordinates((x_min, y_min, x_max, y_max))
-                    # 移动到物品位置并抓取
-                    self.move_and_grab(position_3d)
-                    # 移动到置物筐位置并放置
-                    self.move_and_place(self.basket_position)
-                    collected_count += 1
+                center_x = (x1 + x2) // 2
+                center_y = (y1 + y2) // 2
+                if the_item['is_in_1']:
+                    # 停止机器人
+                    self.stop()
+                    # 勾取饮料
+                    self.hook_item1()
+                    collected_count += 1 
                     print(f"已收集第 {collected_count} 个物品")
+                elif the_item['is_in_2']:
+                    # 停止机器人
+                    self.stop()
+                    # 勾取饮料
+                    self.hook_item2()
+                    collected_count += 1 
+                    print(f"已收集第 {collected_count} 个物品")
+                elif the_item['is_in_3']:
+                    # 停止机器人
+                    self.stop()
+                    # 移动到物品位置并抓取
+                    self.arm_collect()
+                    collected_count += 1 
+                    print(f"已收集第 {collected_count} 个物品")
+                elif the_item['is_in_4']:
+                    # 停止机器人
+                    self.stop()
+                    # 移动到物品位置并抓取
+                    self.arm_up()
+                    self.arm_collect()
+                    collected_count += 1 
+                    print(f"已收集第 {collected_count} 个物品")
+
+
             
             # 短暂延迟，避免过于频繁的检测
             time.sleep(0.1)
         
     def collect_second_level_drinks(self):
         """从第二层收集指定饮料"""
+        # 控制机器人绕货架前进
+        print("前进")
+        self.travel()
         while len(self.collected_items) < len(self.target_drinks):
             image = self.vision_detector.get_camera_image()# 获取图像
-            # 控制机器人绕货架前进
-            print("前进")
-            self.go_ahead()
-            time.sleep(2)
             # 检测饮料
             detected_drinks = self.vision_detector.detect_drinks(image, self.target_drinks)
             # print(1)
             print(detected_drinks)
             for drink in detected_drinks:
-                # self.move_to_position(drink["is_in_Xcenter"],0)
-                # print(2)
                 # print(detected_drinks)
                 if drink['is_in_1'] and drink['name'] not in self.collected_items :
-                    # print(20)
-                    # 移动到饮料位置并勾取
-                    self.hook_item()
-                    # print(30)
+                    # 停止机器人
+                    self.stop()
+                    # 勾取饮料
+                    self.hook_item1()
                     self.collected_items.append(drink['name'])
-                    # print(40)
                     print(f"已收集饮料: {self.collected_items}")
+                    self.travel()
+                    break
+                
 
     def read_shelf_label(self, position_index):
         """
@@ -365,7 +399,9 @@ class Robot:
         return None
 
     def handle_first_level_drinks(self):
-        """处理第一层饮料的上架任务"""
+        """将第一层待上架的饮料上架到第三层"""
+        print("前进")
+        self.travel()
         placed_count = 0
         while placed_count < len(self.shelf_positions):
             # 读取当前标签槽的物品名称
@@ -383,9 +419,9 @@ class Robot:
             for drink in detected_drinks:
                 if drink['is_in_center']:
                     # 移动到饮料位置并抓取
-                    self.move_and_grab(drink['position'])
+                    self.arm_grab(drink['position'])
                     # 移动到第三层指定位置并放置
-                    self.move_and_place(self.shelf_positions[placed_count])
+                    self.arm_up_and_place(self.shelf_positions[placed_count])
                     placed_count += 1
                     break
             
@@ -395,8 +431,7 @@ class Robot:
         """执行移动任务"""
         print("开始执行移动任务")
         try:
-
-            # 1. 识别初见物品
+            # # 1. 识别初见物品
             # sample_item = self.observe_sample_item()
             # print(f"检测到的样品物品: {sample_item}")
             
@@ -407,7 +442,7 @@ class Robot:
             # # 3. 处理第一层饮料
             # self.handle_first_level_drinks()
             
-            # 4. 收集样品物品
+            # # 4. 收集样品物品
             # self.collect_sample_items()
             # print(f"最终收集的物品: {self.collected_items}")
             
@@ -419,6 +454,6 @@ class Robot:
             # 关闭串口连接
             self.serial_comm.close()
 
-if __name__ == "__main__":
-    robot = Robot()
-    robot.hook_item()
+# if __name__ == "__main__":
+#     robot = Robot()
+#     robot.hook_item()

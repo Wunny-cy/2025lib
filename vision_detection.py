@@ -9,7 +9,7 @@ import torch
 regions = []
 class VisionDetector:
     def __init__(self):
-        self.model = YOLO('3.pt')  
+        self.model = YOLO('best.pt')  
         self.image_center_threshold = 50  # 图像中心区域的阈值（像素）
         
         # 检查是否有可用的GPU
@@ -289,9 +289,9 @@ class VisionDetector:
         height, width = image.shape[:2]
         return (width // 2, height // 2)
     
-    def is_in_center(self, bbox, image):
+    def is_in_center(self, x_offset, y_offset):
         """
-        计算边界框相对于中心区域的偏移量
+        判断目标是否在中心区域
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
             image: 输入图像
@@ -300,72 +300,16 @@ class VisionDetector:
                   x_offset: 正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
                   y_offset: 正值表示目标在中心区域下方，负值表示目标在中心区域上方
         """
-        # 获取图像中心点
-        height, width = image.shape[:2]
-        center_x = width // 2
-        center_y = height // 2
-        
-        # 定义中心区域
-        x1 = center_x - 120
-        y1 = center_y + 180
-        x2 = center_x + 120
-        y2 = center_y - 200
-        
-        # 计算目标物体的中心点
-        target_center_x = (bbox[0] + bbox[2]) / 2
-        target_center_y = (bbox[1] + bbox[3]) / 2
-        
-        # 计算相对于中心区域的偏移量
-        x_offset = 0
-        y_offset = 0
-        
-        # 计算水平偏移
-        if target_center_x < x1:
-            x_offset = target_center_x - x1  # 负值，表示在左侧
-        elif target_center_x > x2:
-            x_offset = target_center_x - x2  # 正值，表示在右侧
-            
-        # 计算垂直偏移
-        if target_center_y < y2:
-            y_offset = target_center_y - y2  # 负值，表示在上方
-        elif target_center_y > y1:
-            y_offset = target_center_y - y1  # 正值，表示在下方
-        
-        return (x_offset, y_offset)
+        if -3 < x_offset < 3 and -3 < y_offset < 3 :
+            return True
+        else:
+            return False
     
-    def is_in_Xcenter(self, bbox, image):
-        """
-        计算边界框相对于X轴中心区域的偏移量
-        Args:
-            bbox: 边界框坐标 (x1, y1, x2, y2)
-            image: 输入图像
-        Returns:
-            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
-        """
-        # 获取图像中心点
-        height, width = image.shape[:2]  # 获取图像的高度和宽度
-        center_x = width // 2
-        # 定义中心区域
-        x1 = center_x - 120
-        x2 = center_x + 120
-        
-        # 计算目标物体的中心点
-        target_center_x = (bbox[0] + bbox[2]) / 2
-        
-        # 计算相对于中心区域的偏移量
-        x_offset = 0
-        
-        # 计算水平偏移
-        if target_center_x < x1:
-            x_offset = target_center_x - x1  # 负值，表示在左侧
-        elif target_center_x > x2:
-            x_offset = target_center_x - x2  # 正值，表示在右侧
-            
-        return x_offset
     
-    def is_in_1(self, bbox, image):
+    
+    def is_in_1(self, bbox):
         """
-        计算边界框相对于X轴中心区域的偏移量
+        判断目标是否在1区域
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
             image: 输入图像
@@ -377,25 +321,142 @@ class VisionDetector:
         # center_x = width // 2
         x1, y1, x2, y2 = bbox
         # 定义中心区域
-        x11 =0
+        x11 =30
+        y11 = 1000
         x12 = 230
+        y12 = 1500
         
         # 计算目标物体的中心点
         target_center_x = (x1 + x2) / 2
+        target_center_y = (y1 + y2) / 2
         
         # 计算相对于中心区域的偏移量
         x_offset = 0
+        y_offset = 0
         
-        # 计算水平偏移
-        if target_center_x < x11:
-            x_offset = target_center_x - x11  # 负值，表示在左侧
-            # return True
-        elif target_center_x > x12:
-            x_offset = target_center_x - x12  # 正值，表示在右侧
-            # return False
-            
+        if x11 < target_center_x < x12 and y11 < target_center_y < y12:
+            return True
+        else:
+            return False
+
+        # # 计算水平偏移
+        # if target_center_x < x11:
+        #     x_offset = target_center_x - x11  # 负值，表示在左侧
+        #     # return True
+        # elif target_center_x > x12:
+        #     x_offset = target_center_x - x12  # 正值，表示在右侧
+        #     # return False
+        
+        # if target_center_y < y11:
+        #     y_offset = target_center_y - y11  # 负值，表示在上方
+        #     # return True
+        # elif target_center_y > y12:
+        #     y_offset = target_center_y - y12
+
+        # return (x_offset, y_offset)
         # print("x_offset:", x_offset)
-        return x_offset
+        # return x_offset
+    
+    def is_in_2(self, bbox):
+        """
+        计算边界框相对于1区域的偏移量
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+            image: 输入图像
+        Returns:
+            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+        """
+        x1, y1, x2, y2 = bbox
+        # 定义中心区域(待定)
+        x21 =30
+        y21 = 1000
+        x22 = 230
+        y22 = 1500
+        
+        # 计算目标物体的中心点
+        target_center_x = (x1 + x2) / 2
+        target_center_y = (y1 + y2) / 2
+        
+        # 计算相对于中心区域的偏移量
+        if target_center_x < x21:
+            x_offset = target_center_x - x21  # 负值，表示在左侧
+        elif target_center_x > x22:
+            x_offset = target_center_x - x22  # 正值，表示在右侧
+        
+        if target_center_y < y21:
+            y_offset = target_center_y - y21  # 负值，表示在上方
+        elif target_center_y > y22:
+            y_offset = target_center_y - y22  # 正值，表示在下方
+
+        return (x_offset, y_offset)
+    
+    def is_in_3(self, bbox):
+        """
+        计算边界框相对于1区域的偏移量
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+            image: 输入图像
+        Returns:
+            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+        """
+        x1, y1, x2, y2 = bbox
+        # 定义中心区域(待定)
+        x21 =30
+        y21 = 1000
+        x22 = 230
+        y22 = 1500
+        
+        # 计算目标物体的中心点
+        target_center_x = (x1 + x2) / 2
+        target_center_y = (y1 + y2) / 2
+        
+        # 计算相对于中心区域的偏移量
+        if target_center_x < x21:
+            x_offset = target_center_x - x21  # 负值，表示在左侧
+        elif target_center_x > x22:
+            x_offset = target_center_x - x22  # 正值，表示在右侧
+        
+        if target_center_y < y21:
+            y_offset = target_center_y - y21  # 负值，表示在上方
+        elif target_center_y > y22:
+            y_offset = target_center_y - y22  # 正值，表示在下方
+
+        return (x_offset, y_offset)
+    
+    def is_in_4(self, bbox):
+        """
+        计算边界框相对于1区域的偏移量
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+            image: 输入图像
+        Returns:
+            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+        """
+        x1, y1, x2, y2 = bbox
+        # 定义中心区域(待定)
+        x21 =30
+        y21 = 1000
+        x22 = 230
+        y22 = 1500
+        
+        # 计算目标物体的中心点
+        target_center_x = (x1 + x2) / 2
+        target_center_y = (y1 + y2) / 2
+        
+        # 计算相对于中心区域的偏移量
+        if target_center_x < x21:
+            x_offset = target_center_x - x21  # 负值，表示在左侧
+        elif target_center_x > x22:
+            x_offset = target_center_x - x22  # 正值，表示在右侧
+        
+        if target_center_y < y21:
+            y_offset = target_center_y - y21  # 负值，表示在上方
+        elif target_center_y > y22:
+            y_offset = target_center_y - y22  # 正值，表示在下方
+
+        return (x_offset, y_offset)
+
+    
 
     def detect_sample(self):
         """
@@ -484,10 +545,7 @@ class VisionDetector:
                 return None
 
             # 获取摄像头图像
-            ret, frame = self.cap.read()
-            if not ret:
-                print("错误：无法读取摄像头图像")
-                return None
+            frame = self.get_camera_image()
 
             # 转换为灰度图
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -518,25 +576,39 @@ class VisionDetector:
                 # 计算矩形框的左上角和右下角坐标
                 x_coords = [int(p[0][0]) for p in dst]
                 y_coords = [int(p[0][1]) for p in dst]
-                x_min, x_max = min(x_coords), max(x_coords)
-                y_min, y_max = min(y_coords), max(y_coords)
+                x1, x2 = min(x_coords), max(x_coords)
+                y1, y2 = min(y_coords), max(y_coords)
                 
                 # 在原图上绘制矩形框
-                cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 0, 255), 3)
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
                 
                 # 添加文本标签
-                cv2.putText(frame, 'Matched Area', (x_min, y_min-10), 
+                cv2.putText(frame, 'Matched Area', (x1, y1-10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
                 # 显示结果
-                # cv2.imshow('Detection Result', frame)
+                cv2.imshow('Detection Result', frame)
                 cv2.waitKey(1)  # 等待1毫秒
+                position_2d = (x1, y1, x2, y2)
+                t1 = self.is_in_1(position_2d)
+                x1_offset, y1_offset = self.is_in_2(position_2d)
+                t2 = self.is_in_2(position_2d) 
+                x1_offset, y1_offset = self.is_in_3(position_2d)
+                t3 = self.is_in_3(position_2d)
+                x1_offset, y1_offset = self.is_in_4(position_2d)
+                t4 = self.is_in_4(position_2d)
+                
 
                 # 返回匹配区域的位置信息
-                return {
-                    'position': (x_min, y_min, x_max, y_max),
-                    'confidence': len(good) / len(matches) if len(matches) > 0 else 0
+                result = {
+                    'position': position_2d,
+                    'confidence': len(good) / len(matches) if len(matches) > 0 else 0,
+                    'is_in_1': t1,
+                    'is_in_2': t2,
+                    'is_in_3': t3,
+                    'is_in_4': t4
                 }
+                return result
             else:
                 print("警告：未找到足够的匹配点")
                 return None
@@ -545,22 +617,6 @@ class VisionDetector:
             print(f"检测过程中出错: {str(e)}")
             return None
     
-    def convert_to_3d_coordinates(self, bbox):
-        """
-        将2D边界框坐标转换为3D坐标
-        Args:
-            bbox: 边界框坐标 (x1, y1, x2, y2)
-        Returns:
-            tuple: (x, y, z) 3D坐标
-        """
-        # 这里需要根据实际情况实现坐标转换
-        # 示例实现，需要根据实际相机参数和机器人坐标系调整
-        x1, y1, x2, y2 = bbox
-        x = (x1 + x2) / 2
-        y = (y1 + y2) / 2
-        z = 150  # 默认高度，需要根据实际情况调整
-        return (x, y, z)
-
     def detect_drinks(self, image, target_drinks):
         """
         检测指定饮料并返回3D坐标
@@ -570,7 +626,6 @@ class VisionDetector:
         Returns:
             list: 检测到的饮料位置列表
         """
-        # image_tensor = torch.from_numpy(image).to(self.device)
         results = self.model.predict(source=image)
         detected_drinks = []
 
@@ -585,22 +640,13 @@ class VisionDetector:
                 
                 if class_name in target_drinks and confidence > 0.5:
                     x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
-                    # x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
                     position_2d = (x1, y1, x2, y2)
-                    is_in_center = self.is_in_center(position_2d, image)
-                    is_in_Xcenter = self.is_in_Xcenter(position_2d, image)
-                    is_in_1 = self.is_in_1(position_2d, image)
-                    if is_in_1 < 3:
-                        t1=True
-                    else:
-                        t1=False
+                    t1 = self.is_in_1(position_2d)
                     
                     detected_drink = {
                         'name': class_name,
                         'position_2d': position_2d,
                         'confidence': confidence,
-                        'is_in_center': is_in_center,
-                        'is_in_Xcenter': is_in_Xcenter,
                         'is_in_1': t1
                     }
                     # 递归转换所有np.float32类型

@@ -1,11 +1,11 @@
-# 忽略所有 .log 文件
 *.pt
 
 # 忽略特定目录下的所有文件
 __pycache__/
 
-# 忽略某个具体文件
 test.py
+
+serial_test.py
 
 *.pyc
 

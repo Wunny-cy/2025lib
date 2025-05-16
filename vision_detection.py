@@ -9,7 +9,7 @@ from rapidocr import RapidOCR
 class VisionDetector:
     def __init__(self):
         self.model = YOLO('best.pt')  
-        
+        self.ocr = RapidOCR()
         # 打开摄像头
         self.cap = cv2.VideoCapture(0)
         if not self.cap.isOpened():
@@ -26,6 +26,8 @@ class VisionDetector:
         # 创建可调整大小的窗口，并保持图像比例
         cv2.namedWindow('Model Test', cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
         cv2.resizeWindow('Model Test', 750, 1440)  # 设置初始窗口大小
+        
+        self.label = ["锐澳", "东鹏", "茶Ⅱ", "加多宝"]#["锐澳水蜜桃", "东鹏", "茶π柠檬红茶", "加多宝"]
 
     def start_detection(self):
         try:
@@ -48,11 +50,11 @@ class VisionDetector:
                 y1 = center_y + 180
                 x2 = center_x + 120
                 y2 = center_y - 200
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 5)  # 蓝色矩形框
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 3)  # 蓝色矩形框
                 
                 # 绘制1区域矩形框（蓝色）
                 x11 =30
-                y11 = 900
+                y11 = 950
                 x12 = 230
                 y12 = 1400
                 cv2.rectangle(frame, (x11, y11), (x12, y12), (255, 0, 0), 5)  # 蓝色矩形框
@@ -65,18 +67,27 @@ class VisionDetector:
                 cv2.rectangle(frame, (x21, y21), (x22, y22), (255, 0, 0), 5)  # 蓝色矩形框
                 
                 # 绘制3区域矩形框（蓝色）
-                x31 =890
+                x31 =780
                 y31 = 150
                 x32 = 1090
-                y32 = 850
+                y32 = 750
                 cv2.rectangle(frame, (x31, y31), (x32, y32), (255, 0, 0), 5)  # 蓝色矩形框
                 
                 # 绘制4区域矩形框（蓝色）
-                x41 =830
+                x41 =850
                 y41 = 1550
-                x42 = 970
+                x42 = 1050
                 y42 = 2100
                 cv2.rectangle(frame, (x41, y41), (x42, y42), (255, 0, 0), 5)  # 蓝色矩形框
+
+                # 绘制5区域矩形框（蓝色）
+                x51 =1000
+                y51 = 750
+                x52 = 1160
+                y52 = 900
+                cv2.rectangle(frame, (x51, y51), (x52, y52), (255, 0, 0), 5)  # 蓝色矩形框
+                cv2.line(frame, (0,y51), (width,y51), (255, 0, 0), 5)  # 蓝色水平线
+                cv2.line(frame, (0,y52), (width,y52), (255, 0, 0), 5)  # 蓝色水平线
 
                 # 运行模型检测
                 results = self.model.predict(frame)
@@ -148,28 +159,6 @@ class VisionDetector:
         cv2.imwrite(image_path, frame)
         return image_path
     
-    def recognize_shopping_list(self,image_path):
-        # 初始化 RapidOCR
-        ocr = RapidOCR()
-        result = ocr(image_path)
-        if not result:  # 现在这个检查只确保result不是空列表
-            print("没有识别到任何内容")
-            return []
-
-        recognized_items = []  # 存储识别结果的数组
-        if result is not None:  # 添加检查确保result不是None
-            for line in result:
-                if line:  # 确保line本身不为空
-                    for element in line:
-                        if isinstance(element, list) and len(element) > 1:
-                            box = element[0]  # 包围盒坐标
-                            text = element[1][0]  # 识别的文本
-                            # 计算中心坐标
-                            center_x = sum([point[0] for point in box]) / 4
-                            center_y = sum([point[1] for point in box]) / 4
-                            # 将文本和中心坐标存储为元组，并添加到数组中
-                            recognized_items.append([text, (center_x, center_y)])
-        return recognized_items
     
     def get_image_center(self, image):
         """
@@ -205,9 +194,8 @@ class VisionDetector:
         判断目标是否在1区域
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
-            image: 输入图像
         Returns:
-            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+            bool: 是否在标签区域
         """
         # 获取图像中心点
         # height, width = image.shape[:2]  # 获取图像的高度和宽度
@@ -219,7 +207,7 @@ class VisionDetector:
         
         # 定义中心区域
         x11 =30
-        y11 = 900
+        y11 = 950
         x12 = 230
         y12 = 1400
         
@@ -252,12 +240,11 @@ class VisionDetector:
     
     def is_in_2(self, bbox):
         """
-        计算边界框相对于1区域的偏移量
+        判断目标是否在2区域
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
-            image: 输入图像
         Returns:
-            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+            bool: 是否在标签区域
         """
         x1, y1, x2, y2 = bbox
         target_center_x = (x1 + x2) / 2
@@ -277,22 +264,21 @@ class VisionDetector:
     
     def is_in_3(self, bbox):
         """
-        计算边界框相对于1区域的偏移量
+        判断目标是否在3区域
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
-            image: 输入图像
         Returns:
-            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+            bool: 是否在标签区域
         """
         x1, y1, x2, y2 = bbox
         target_center_x = (x1 + x2) / 2
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域(待定)
-        x31 =890
+        x31 =780
         y31 = 150
         x32 = 1090
-        y32 = 850
+        y32 = 750
         
         if x31 < target_center_x < x32 and y31 < target_center_y < y32:
             return True
@@ -301,28 +287,94 @@ class VisionDetector:
     
     def is_in_4(self, bbox):
         """
-        计算边界框相对于1区域的偏移量
+        判断目标是否在4区域
         Args:
             bbox: 边界框坐标 (x1, y1, x2, y2)
-            image: 输入图像
         Returns:
-            float: 偏移量，正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
+            bool: 是否在标签区域
         """
         x1, y1, x2, y2 = bbox
         target_center_x = (x1 + x2) / 2
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域(待定)
-        x41 =830
+        x41 =850
         y41 = 1550
-        x42 = 970
+        x42 = 1050
         y42 = 2100
 
         if x41 < target_center_x < x42 and y41 < target_center_y < y42:
             return True
         else:
             return False
+        
+    # def is_in_5(self, bbox):
+    #     """
+    #     判断目标是否在5区域
+    #     Args:
+    #         bbox: 边界框坐标 (x1, y1, x2, y2)
+    #     Returns:
+    #         bool: 是否在标签区域
+    #     """
+    #     x1, y1, x2, y2 = bbox
+    #     target_center_x = (x1 + x2) / 2
+    #     target_center_y = (y1 + y2) / 2
+        
+    #     # 定义中心区域(待定)
+    #     x51 =930 
+    #     y51 = 700
+    #     x52 = 1230
+    #     y52 = 900
 
+    #     if x51 < target_center_x < x52 and y51 < target_center_y < y52:
+    #         return True
+    #     else:
+    #         return False
+
+    def for_label_area(self, bbox):
+        """
+        判断目标在标签区域的状态
+        Args:
+            bbox: 边界框坐标 (x1, y1, x2, y2)
+        Returns:
+            result: 是否在标签区域
+        """
+        x1, y1, x2, y2 = bbox
+        center_x = (x1 + x2) / 2
+        center_y = (y1 + y2) / 2
+        
+        # 定义中心区域(待定)
+        x51 =1000 
+        y51 = 750
+        x52 = 1160
+        y52 = 900
+
+        tx = False
+        ty = False
+
+        # 计算水平偏移
+        if center_x < x51:
+            x_offset = center_x - x51  # 负值，表示在左侧
+        elif center_x > x52:
+            x_offset = center_x - x52  # 正值，表示在右侧
+        elif x51 < center_x < x52:
+            x_offset = 0
+            tx = True
+
+        if  y51 < center_y < y52:
+            ty = True #在标签检测区域
+        else:
+            ty = False
+
+        print("x_offset:", x_offset)
+        
+        result = {
+                    'tx': tx,
+                    'ty': ty,
+                    'x_offset': x_offset
+                }
+        return  result
+    
     def detect_sample(self):
         """
         提取图像中心的物品并保存为模板图片
@@ -507,6 +559,7 @@ class VisionDetector:
                     t2 = self.is_in_2(position_2d)
                     t3 = self.is_in_3(position_2d)
                     t4 = self.is_in_4(position_2d)
+                    # t5 = self.is_in_5(position_2d)
                     
                     detected_drink = {
                         'name': class_name,
@@ -515,14 +568,23 @@ class VisionDetector:
                         'is_in_1': t1,
                         'is_in_2': t2,
                         'is_in_3': t3,
-                        'is_in_4': t4
+                        'is_in_4': t4,
+                        # 'is_in_5': t5
                     }
                     # 递归转换所有np.float32类型
                     converted_drink = self.convert_np_floats(detected_drink)
                     detected_drinks.append(converted_drink)
         return detected_drinks
-    
-     
+    def label_correct(self, label):
+        """
+        设置需要更改的标签
+        Args:
+            label: 需要更改的标签
+        """
+        if label.startswith("茶"):
+            return "cp"
+        else:
+            return label  # 如果没有匹配的标签，返回原始标签
 
     def detect_labels(self, image, label):
         """
@@ -533,37 +595,42 @@ class VisionDetector:
         Returns:
             list: 检测到的标签位置列表
         """
-        ocr = RapidOCR()
-        results = ocr(image, det_box=True ) 
+        
+        results = self.ocr(image) 
         detected_labels = []
-
-        for result in results:
-            boxes = results
-            # print(boxes)
-            for box in boxes:
-                confidence = float(result['scores'][0])
-                class_name = result['txts']
+        if results:
+        # 遍历识别结果
+            for box, txt, score, elapse in zip(results.boxes, results.txts, results.scores, results.elapse_list):
+                print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}, Elapsed time: {elapse:.2f}ms")
+                confidence = float(score)
+                class_name = txt
                 # print(class_name)
                 
-                if class_name in label and confidence > 0.2:
-                    x1, y1, x2, y2 = map(int, result['boxes'])
+                if  confidence > 0.2:
+                    x1, y1, x2, y2 = map(int, [box[0][0], box[0][1], box[2][0], box[2][1]])
                     position_2d = (x1, y1, x2, y2)
-                    t3 = self.is_in_3(position_2d)
+                    label_area = self.for_label_area(position_2d)
                     
                     detected_label = {
                         'name': class_name,
                         'position_2d': position_2d,
                         'confidence': confidence,
-                        'is_in_3': t3
+                        'tx': label_area['tx'],
+                        'ty': label_area['ty'],
+                        'x_offset': label_area['x_offset']
                     }
                     # 递归转换所有np.float32类型
                     converted_label = self.convert_np_floats(detected_label)
                     detected_labels.append(converted_label)
         return detected_labels
 
+
+
 def test2():
     detector = VisionDetector()
-    detector.start_detection()
+    while True:
+        image = detector.get_camera_image()
+        print(detector.detect_labels(image, detector.label))
 
 if __name__ == "__main__":
     test2()

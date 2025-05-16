@@ -2,7 +2,7 @@ import serial
 import time
 
 class SerialCommunication:
-    def __init__(self, port='COM22', baudrate=115200):
+    def __init__(self, port='COM19', baudrate=115200):
         """
         初始化串口通信
         Args:

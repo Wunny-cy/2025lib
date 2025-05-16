@@ -1,7 +1,7 @@
 from serial_communication import SerialCommunication
 import time
 
-floor = 0
+floor = 1
 
 class Robot:
     def __init__(self,detector):
@@ -17,7 +17,9 @@ class Robot:
         # self.DTG(1,1)
         print("DTG")
         # time.sleep(3)
-        self.SVO(1, 60, 1000) 
+        self.SVO(1, 50, 1000) 
+        self.SVO(2, 15, 1000) 
+        self.SVO(3, 85, 1000)
         # time.sleep(1.5)
         # self.SVO(1, 80, 1000) 
         # time.sleep(1.5)
@@ -41,10 +43,6 @@ class Robot:
             (300, 50, 200),   # 第三个标签槽位置
             (400, 50, 200)    # 第四个标签槽位置
         ]
-    def remove_first_char(self ,s):
-        if s and s[0] == 'T':
-            return s[1:]
-        return s
 
     def DTG(self, id, dir):
         """
@@ -86,7 +84,7 @@ class Robot:
         """
         执行抓取动作
         """
-        self.serial_comm.send_command("SVO 3 0 1000")  # 关闭夹爪
+        self.serial_comm.send_command("SVO 3 20 1000")  # 关闭夹爪
         print("关闭夹爪")
         self.serial_comm.check_ok()
         print(f"关闭夹爪指令已执行")
@@ -95,7 +93,7 @@ class Robot:
         """
         执行释放动作
         """
-        self.serial_comm.send_command("SVO 3 30 1000")  # 打开夹爪
+        self.serial_comm.send_command("SVO 3 50 1000")  # 打开夹爪
         print("打开夹爪")
         self.serial_comm.check_ok()
         print(f"打开夹爪指令已执行")
@@ -110,7 +108,7 @@ class Robot:
         # 抓取物品
         self.arm_grab_item()
         # 略微抬起机械爪
-        self.slide_move(1, 2)
+        self.slide_move(1, 3)
         # 收回电推杆
         self.DTG(3, 0)
         time.sleep(5)#延时等待电推杆到位
@@ -134,22 +132,21 @@ class Robot:
         time.sleep(5)#延时等待电推杆到位  
         self.arm_release_item()
 
-
     def hook_item1(self):
         """
         执行勾取动作
         """
-        self.SVO(1, 140, 1000)
+        self.SVO(1, 125, 1000)
         time.sleep(1.5)
-        self.SVO(1, 60, 1000)
+        self.SVO(1, 50, 1000)
 
     def hook_item2(self):
         """
         执行勾取动作
         """
-        self.SVO(2, 140, 1000)
+        self.SVO(2, 80, 1000)
         self.serial_comm.check_ok()
-        self.SVO(2, 60, 1000)
+        self.SVO(2, 15, 1000)
         self.serial_comm.check_ok()
 
     def slide_move(self , dir , turns):
@@ -159,17 +156,17 @@ class Robot:
             dir: 移动方向 (0:向下, 1:向上)
             turns: 移动圈数
         """
-        self.serial_comm.send_command(f"MOVE 1 {dir} {turns}")  # 控制电推杆
+        self.serial_comm.send_command(f"MOVE 1 {dir} {turns}")  
         print(f"滑轨{dir} {turns}指令已发送")
         self.serial_comm.check_ok()
         print(f"滑轨{dir} {turns}指令已执行")
         time.sleep(1)
 
-    def slide_position_set0(self):
+    def slide_floor_set1(self):
         """
         设置滑轨位置
         """
-        self.serial_comm.send_command(f"SET0")
+        self.serial_comm.send_command(f"SET1")
         print(f"回到零点并校正指令已发送")
         self.serial_comm.check_ok()
         print(f"回到零点并校正指令已执行")
@@ -178,32 +175,17 @@ class Robot:
         """
         设置滑轨位置
         Args:
-            floor: 楼层 (1-3)
+            floor: 楼层 (1,2,3)
         """
-        if floor not in [0 ,1, 3] :
-            raise ValueError("楼层为0，1，3")
+        if floor not in [1 ,2, 3] :
+            raise ValueError("楼层为1，2，3")
         elif floor == position:
-            raise ValueError("楼层和位置不能相同")
+            raise ValueError("目标楼层和当前位置不能相同")
         self.serial_comm.send_command(f"F{floor}T{position}")
         print(f"滑轨从{floor}层到{position}层指令已发送")
         self.serial_comm.check_ok()
         print(f"滑轨从{floor}层到{position}层指令已执行")
 
-    def slide_position_set(self, position1, position2):
-        """
-        设置滑轨位置
-        Args:
-            position1: 第一个滑轨位置
-            position2: 第二个滑轨位置
-        """
-        if position1 not in [0, 1, 3] or position2 not in [1, 3] or position1 == position2:
-            raise ValueError("position1 和 position2 的值只能是1或3")
-        self.serial_comm.send_command(f"F{position1}T{position2}")  # 控制滑轨
-        print(f"滑轨{id}指令已发送")
-        self.serial_comm.check_ok()
-        print(f"滑轨{id}指令已执行")
-        return position2
-    
     # def move_to_position(self, x, y):
     #     """
     #     控制机器人移动到指定位置
@@ -216,10 +198,9 @@ class Robot:
     #     # 再移动Y坐标
     #     self.move(f"Y{y}")
     
-    def arm_up(self):
-        print(1)#待修改
+    # def arm_up(self):
+    #     print(1)#待修改
 
-    
     def go_ahead(self):
         """
         控制机器人直行前进
@@ -238,9 +219,33 @@ class Robot:
         # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
         command = f"ZX 500"
         self.serial_comm.send_command(command)
+        print("前进检测指令已发送")
+        self.serial_comm.check_ok()
+        print("前进检测指令已执行")
+
+
+    def slide_forward(self):
+        """
+        控制机器人前进
+        """
+        # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
+        command = f"ZX 400"
+        self.serial_comm.send_command(command)
         print("前进指令已发送")
         self.serial_comm.check_ok()
         print("前进指令已执行")
+
+    def slide_backward(self):
+        """
+        控制机器人后退
+        """
+        # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
+        command = f"HT 400"
+        self.serial_comm.send_command(command)
+        print("后退指令已发送")
+        self.serial_comm.check_ok()
+        print("后退指令已执行")
+        
 
     def stop(self):
         """
@@ -354,6 +359,8 @@ class Robot:
 
     def handle_first_level_drinks(self):
         """将第一层待上架的饮料上架到第三层"""
+        self.slide_move(1,1)
+        self.slide_floor_set1()
         self.travel()
         print("前进")
         while len(self.placed_items) < len(self.shelf_drinks):
@@ -365,11 +372,11 @@ class Robot:
                 # print(detected_drinks)
                 if drink['is_in_4'] and drink['name'] not in self.placed_items :
                     self.stop()
-                    self.slide_floor_set(1)
                     self.arm_grab()
                     self.slide_floor_set(3)
+                    time.sleep(5)
                     #放置
-                    self.grabed_items_place()
+                    self.grabed_items_place(drink['name'])
                     self.placed_items.append(drink['name'])
                     print(f"已上架饮料: {self.placed_items}")
                     self.handle_first_level_drinks()
@@ -381,31 +388,55 @@ class Robot:
             label: 需要更改的标签
         """
         if label == "锐澳":
-            label = "riosmt"
+            return "riosmt"
         elif label == "东鹏":
-            label = "dpty"
-        elif label == "茶Ⅱ":
-            label = "cp"
+            return "dpty"
+        elif label.startswith("茶"):
+            return "cp"
         elif label == "加多宝":
-            label = "jdb"
-
-        return label   
+            return "jdb"
+        else:
+            return label  # 如果没有匹配的标签，返回原始标签
     
-    def grabed_items_place(self):
+    # def name_to_label(self, name):
+    #     """
+    #     设置需要更改的标签
+    #     Args:
+    #         name: 需要更改的标签
+    #     """
+    #     if name == "riosmt":
+    #         name = "锐澳"
+    #     elif name == "dpty":
+    #         name = "东鹏"
+    #     elif name == "cp":
+    #         name = "茶Ⅱ"
+    #     elif name == "jdb":
+    #         name = "加多宝"
+
+    #     return name
+    
+    def grabed_items_place(self , label_name):
         """检测标签位置，将抓取的饮料放置到指定位置"""
         self.travel()
         print("前进")
-        image = self.vision_detector.get_camera_image()# 获取图像
-        # 检测标签
-        detected_labels = self.vision_detector.detect_labels(image, self.label)
-        # print(1)
-        print(f"检测到的标签: {detected_labels}")
-        for label in detected_labels:
-            # print(detected_labels)
-            if label['is_in_3'] and label['name'] not in self.placed_items and self.label_change(label['name']) in self.grab_items:
-                self.stop()
-                #放置
-                self.arm_place()
+        t = 0
+        while t == 0:
+            image = self.vision_detector.get_camera_image()# 获取图像
+            # 检测标签
+            detected_labels = self.vision_detector.detect_labels(image, self.label)
+            for label in detected_labels:
+                print(f"检测到的标签: {label['name']}")
+                if label['ty'] and self.label_change(label['name']) == label_name and label['name'] not in self.placed_items :
+                    if label['x_offset'] < 0:
+                        self.slide_backward()
+                    elif label['x_offset'] > 0:
+                        self.slide_forward()
+                    elif label['tx']:
+                        #放置
+                        self.stop()
+                        self.arm_place()
+                        t = 1
+                        break
                 break
 
     # def execute_task(self):
@@ -455,7 +486,6 @@ class Robot:
         """上架"""
         print("开始执行移动任务")
         try:
-            # 3. 处理第一层饮料
             self.handle_first_level_drinks()
 
             print("所有移动任务执行完成")

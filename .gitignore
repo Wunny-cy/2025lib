@@ -10,3 +10,5 @@ serial_test.py
 *.pyc
 
 *.jpg
+
+test*

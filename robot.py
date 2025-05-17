@@ -206,7 +206,7 @@ class Robot:
         控制机器人直行前进
         """
         # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
-        command = f"FWD 500 150"
+        command = f"FWD 500 1100"
         self.serial_comm.send_command(command)
         print("前进指令已发送")
         self.serial_comm.check_ok()
@@ -281,9 +281,11 @@ class Robot:
         # # 获取图像
         # image = self.vision_detector.get_camera_image()
         # 检测样品
-        sample_item = self.vision_detector.detect_sample()
+        image = self.vision_detector.get_camera_image()# 获取图像
+        sample_item = self.vision_detector.detect_sample(image)
         if sample_item is None:
             raise Exception("未能检测到样品物品")
+        
         return sample_item
         
     def collect_sample_items(self):
@@ -423,7 +425,7 @@ class Robot:
         while t == 0:
             image = self.vision_detector.get_camera_image()# 获取图像
             # 检测标签
-            detected_labels = self.vision_detector.detect_labels(image, self.label)
+            detected_labels = self.vision_detector.detect_labels(image, self.label,label_name)
             for label in detected_labels:
                 print(f"检测到的标签: {label['name']}")
                 if label['ty'] and self.label_change(label['name']) == label_name and label['name'] not in self.placed_items :

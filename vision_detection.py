@@ -42,15 +42,13 @@ class VisionDetector:
 
                 # 获取图像中心点
                 height, width = frame.shape[:2]
-                center_x = width // 2
-                center_y = height // 2
                 
                 # 绘制0区域矩形框（蓝色）
-                x1 = center_x - 120
-                y1 = center_y + 180
-                x2 = center_x + 120
-                y2 = center_y - 200
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 0, 0), 3)  # 蓝色矩形框
+                x01 = 600
+                y01 = 1030
+                x02 = 840
+                y02 = 1460
+                cv2.rectangle(frame, (x01, y01), (x02, y02), (255, 0, 0), 3)  # 蓝色矩形框
                 
                 # 绘制1区域矩形框（蓝色）
                 x11 =30
@@ -171,21 +169,28 @@ class VisionDetector:
         height, width = image.shape[:2]
         return (width // 2, height // 2)
     
-    def is_in_center(self, x_offset, y_offset):
-        """
-        判断目标是否在中心区域
-        Args:
-            bbox: 边界框坐标 (x1, y1, x2, y2)
-            image: 输入图像
-        Returns:
-            tuple: (x_offset, y_offset) 偏移量
-                  x_offset: 正值表示目标在中心区域右侧，负值表示目标在中心区域左侧
-                  y_offset: 正值表示目标在中心区域下方，负值表示目标在中心区域上方
-        """
-        if -3 < x_offset < 3 and -3 < y_offset < 3 :
-            return True
-        else:
-            return False
+    # def is_in_0(self, bbox):
+    #     """
+    #     判断目标是否在0区域
+    #     Args:
+    #         bbox: 边界框坐标 (x1, y1, x2, y2)
+    #     Returns:
+    #         bool: 是否在标签区域
+    #     """
+    #     x1, y1, x2, y2 = bbox
+    #     target_center_x = (x1 + x2) / 2
+    #     target_center_y = (y1 + y2) / 2
+        
+    #     # 定义中心区域(待定)
+    #     x01 = 600
+    #     y01 = 1080
+    #     x02 = 840
+    #     y02 = 1460
+
+    #     if x01 < target_center_x < x02 and y01 < target_center_y < y02:
+    #         return True
+    #     else:
+    #         return False
     
     
     
@@ -375,78 +380,69 @@ class VisionDetector:
                 }
         return  result
     
-    def detect_sample(self):
+    def detect_sample(self, image):
         """
         提取图像中心的物品并保存为模板图片
         Returns:
             bool: 是否成功保存模板
         """
-        try:
-            # 获取摄像头图像
-            ret, frame = self.cap.read()
-            if not ret:
-                print("错误：无法读取摄像头图像")
-                return False
+        x01 = 600
+        y01 = 1030
+        x02 = 840
+        y02 = 1460
 
-            # 获取图像中心区域
-            height, width = frame.shape[:2]
-            center_x = width // 2
-            center_y = height // 2
-            
-            # 定义中心区域的大小（可以根据需要调整）
-            region_size = 200  # 中心区域边长的一半
-            
-            # 计算中心区域的边界
-            x1 = max(0, center_x - region_size)
-            y1 = max(0, center_y - region_size)
-            x2 = min(width, center_x + region_size)
-            y2 = min(height, center_y + region_size)
-            
-            # 提取中心区域
-            center_region = frame[y1:y2, x1:x2]
-            
-            # 转换为灰度图
-            gray = cv2.cvtColor(center_region, cv2.COLOR_BGR2GRAY)
-            
-            # 应用双边滤波
-            filtered = cv2.bilateralFilter(gray, 9, 75, 75)
-            
-            # 应用自适应阈值处理
-            thresh = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                         cv2.THRESH_BINARY, 11, 2)
-            
-            # 查找轮廓
-            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            if not contours:
-                print("警告：未在中心区域找到物品")
-                return False
-            
-            # 找到最大的轮廓
-            max_contour = max(contours, key=cv2.contourArea)
-            
-            # 获取轮廓的边界框
-            x, y, w, h = cv2.boundingRect(max_contour)
-            
-            # 在原图上绘制边界框
-            cv2.rectangle(center_region, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            
-            # 提取物品区域
-            item_region = center_region[y:y+h, x:x+w]
-            
-            # 保存模板图片
-            cv2.imwrite('template.jpg', item_region)
-            
-            # 显示结果
-            # cv2.imshow('Template', item_region)
-            cv2.waitKey(1)
-            
-            print(f"模板已保存为 template.jpg，尺寸: {item_region.shape}")
-            return True
-            
-        except Exception as e:
-            print(f"提取模板过程中出错: {str(e)}")
+        x01 = x01 + 20
+        y01 = y01 + 20
+        x02 = x02 - 20
+        y02 = y02 - 20
+        
+        # 提取中心区域
+        center_region = image[y01:y02, x01:x02]
+        
+        # 转换为灰度图
+        gray = cv2.cvtColor(center_region, cv2.COLOR_BGR2GRAY)
+        
+        # 应用双边滤波
+        filtered = cv2.bilateralFilter(gray, 9, 75, 75)
+        cv2.imshow("Filtered", filtered)
+        
+        # 应用自适应阈值处理
+        thresh = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                        cv2.THRESH_BINARY, 11, 2)
+        cv2.imshow("Threshold", thresh)
+
+        # Canny边缘检测
+        edges = cv2.Canny(thresh, 150, 200)  # 100和200是阈值
+        cv2.imshow("Edges", edges)
+        # 查找轮廓
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if not contours:
+            print("警告：未在中心区域找到物品")
             return False
+        
+        # 找到最大的轮廓
+        max_contour = max(contours, key=cv2.contourArea)
+        
+        # 获取轮廓的边界框
+        x, y, w, h = cv2.boundingRect(max_contour)
+        
+        # 在原图上绘制边界框
+        cv2.rectangle(center_region, (x, y), (x+w, y+h), (0, 255, 0), 2)
+
+        cv2.imshow("Center Region", center_region)
+        
+        # 提取物品区域
+        item_region = center_region[y:y+h, x:x+w]
+        
+        # 保存模板图片
+        cv2.imwrite('template.jpg', item_region)
+        
+        cv2.waitKey(1)
+        
+        print(f"模板已保存为 template.jpg，尺寸: {item_region.shape}")
+        return True
+        
     
     def detect_sample_item(self):
         """
@@ -504,7 +500,7 @@ class VisionDetector:
                             cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
 
                 # 显示结果
-                cv2.imshow('Detection Result', frame)
+                # cv2.imshow('Detection Result', frame)
                 cv2.waitKey(1)  # 等待1毫秒
                 position_2d = (x1, y1, x2, y2)
                 t1 = self.is_in_1(position_2d)
@@ -512,7 +508,6 @@ class VisionDetector:
                 t3 = self.is_in_3(position_2d)
                 t4 = self.is_in_4(position_2d)
                 
-
                 # 返回匹配区域的位置信息
                 result = {
                     'position': position_2d,
@@ -586,7 +581,7 @@ class VisionDetector:
         else:
             return label  # 如果没有匹配的标签，返回原始标签
 
-    def detect_labels(self, image, label):
+    def detect_labels(self, image, label_list, label_name):
         """
         检测指定标签并返回坐标
         Args:
@@ -595,18 +590,15 @@ class VisionDetector:
         Returns:
             list: 检测到的标签位置列表
         """
-        
         results = self.ocr(image) 
         detected_labels = []
         if results:
         # 遍历识别结果
-            for box, txt, score, elapse in zip(results.boxes, results.txts, results.scores, results.elapse_list):
-                # print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}, Elapsed time: {elapse:.2f}ms")
+            for box, txt, score in zip(results.boxes, results.txts, results.scores):
+                # print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}")
                 confidence = float(score)
                 class_name = txt
-                # print(class_name)
-                
-                if  confidence > 0.2 and self.label_correct(class_name) in label:
+                if  confidence > 0.2 and self.label_correct(class_name) == label_name:
                     x1, y1, x2, y2 = map(int, [box[0][0], box[0][1], box[2][0], box[2][1]])
                     position_2d = (x1, y1, x2, y2)
                     label_area = self.for_label_area(position_2d)
@@ -630,7 +622,7 @@ def test2():
     detector = VisionDetector()
     while True:
         image = detector.get_camera_image()
-        print(detector.detect_labels(image, detector.label))
+        detector.detect_sample(image)
 
 if __name__ == "__main__":
     test2()

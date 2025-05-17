@@ -70,21 +70,21 @@ class VisionDetector:
                 x31 =780
                 y31 = 150
                 x32 = 1090
-                y32 = 750
+                y32 = 650
                 cv2.rectangle(frame, (x31, y31), (x32, y32), (255, 0, 0), 5)  # 蓝色矩形框
                 
                 # 绘制4区域矩形框（蓝色）
                 x41 =850
                 y41 = 1550
-                x42 = 1050
-                y42 = 2100
+                x42 = 1000
+                y42 = 2000
                 cv2.rectangle(frame, (x41, y41), (x42, y42), (255, 0, 0), 5)  # 蓝色矩形框
 
                 # 绘制5区域矩形框（蓝色）
                 x51 =1000
-                y51 = 750
+                y51 = 650
                 x52 = 1160
-                y52 = 900
+                y52 = 850
                 cv2.rectangle(frame, (x51, y51), (x52, y52), (255, 0, 0), 5)  # 蓝色矩形框
                 cv2.line(frame, (0,y51), (width,y51), (255, 0, 0), 5)  # 蓝色水平线
                 cv2.line(frame, (0,y52), (width,y52), (255, 0, 0), 5)  # 蓝色水平线
@@ -278,7 +278,7 @@ class VisionDetector:
         x31 =780
         y31 = 150
         x32 = 1090
-        y32 = 750
+        y32 = 650
         
         if x31 < target_center_x < x32 and y31 < target_center_y < y32:
             return True
@@ -300,8 +300,8 @@ class VisionDetector:
         # 定义中心区域(待定)
         x41 =850
         y41 = 1550
-        x42 = 1050
-        y42 = 2100
+        x42 = 1000
+        y42 = 2000
 
         if x41 < target_center_x < x42 and y41 < target_center_y < y42:
             return True
@@ -345,9 +345,9 @@ class VisionDetector:
         
         # 定义中心区域(待定)
         x51 =1000 
-        y51 = 750
+        y51 = 650
         x52 = 1160
-        y52 = 900
+        y52 = 850
 
         tx = False
         ty = False
@@ -582,7 +582,7 @@ class VisionDetector:
             label: 需要更改的标签
         """
         if label.startswith("茶"):
-            return "cp"
+            return "茶Ⅱ"
         else:
             return label  # 如果没有匹配的标签，返回原始标签
 
@@ -601,16 +601,15 @@ class VisionDetector:
         if results:
         # 遍历识别结果
             for box, txt, score, elapse in zip(results.boxes, results.txts, results.scores, results.elapse_list):
-                print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}, Elapsed time: {elapse:.2f}ms")
+                # print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}, Elapsed time: {elapse:.2f}ms")
                 confidence = float(score)
                 class_name = txt
                 # print(class_name)
                 
-                if  confidence > 0.2:
+                if  confidence > 0.2 and self.label_correct(class_name) in label:
                     x1, y1, x2, y2 = map(int, [box[0][0], box[0][1], box[2][0], box[2][1]])
                     position_2d = (x1, y1, x2, y2)
                     label_area = self.for_label_area(position_2d)
-                    
                     detected_label = {
                         'name': class_name,
                         'position_2d': position_2d,
@@ -621,6 +620,7 @@ class VisionDetector:
                     }
                     # 递归转换所有np.float32类型
                     converted_label = self.convert_np_floats(detected_label)
+                    print(f"111:{converted_label}")
                     detected_labels.append(converted_label)
         return detected_labels
 

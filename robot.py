@@ -17,9 +17,9 @@ class Robot:
         # self.DTG(1,1)
         print("DTG")
         # time.sleep(3)
-        self.SVO(1, 50, 1000) 
-        self.SVO(2, 15, 1000) 
-        self.SVO(3, 85, 1000)
+        # self.SVO(2, 50, 1000) 
+        # self.SVO(3, 15, 1000) 
+        self.SVO(4, 85, 1000)
         # time.sleep(1.5)
         # self.SVO(1, 80, 1000) 
         # time.sleep(1.5)
@@ -84,7 +84,7 @@ class Robot:
         """
         执行抓取动作
         """
-        self.serial_comm.send_command("SVO 3 20 1000")  # 关闭夹爪
+        self.serial_comm.send_command("SVO 4 20 1000")  # 关闭夹爪
         print("关闭夹爪")
         self.serial_comm.check_ok()
         print(f"关闭夹爪指令已执行")
@@ -93,7 +93,7 @@ class Robot:
         """
         执行释放动作
         """
-        self.serial_comm.send_command("SVO 3 50 1000")  # 打开夹爪
+        self.serial_comm.send_command("SVO 4 50 1000")  # 打开夹爪
         print("打开夹爪")
         self.serial_comm.check_ok()
         print(f"打开夹爪指令已执行")
@@ -136,17 +136,17 @@ class Robot:
         """
         执行勾取动作
         """
-        self.SVO(1, 125, 1000)
+        self.SVO(2, 125, 1000)
         time.sleep(1.5)
-        self.SVO(1, 50, 1000)
+        self.SVO(2, 50, 1000)
 
     def hook_item2(self):
         """
         执行勾取动作
         """
-        self.SVO(2, 80, 1000)
+        self.SVO(3, 80, 1000)
         self.serial_comm.check_ok()
-        self.SVO(2, 15, 1000)
+        self.SVO(3, 15, 1000)
         self.serial_comm.check_ok()
 
     def slide_move(self , dir , turns):

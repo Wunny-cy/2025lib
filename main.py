@@ -20,8 +20,8 @@ def main():
     time.sleep(1)
     
     # robot.execute_task1()
-    robot.execute_task2()
-    # robot.execute_task3()
+    # robot.execute_task2()
+    robot.execute_task3()
     # robot.execute_task()
 
     detection_thread.join()

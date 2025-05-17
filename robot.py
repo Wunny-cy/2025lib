@@ -425,7 +425,7 @@ class Robot:
         while t == 0:
             image = self.vision_detector.get_camera_image()# 获取图像
             # 检测标签
-            detected_labels = self.vision_detector.detect_labels(image, self.label,label_name)
+            detected_labels = self.vision_detector.detect_labels(image, self.label, label_name)
             for label in detected_labels:
                 print(f"检测到的标签: {label['name']}")
                 if label['ty'] and self.label_change(label['name']) == label_name and label['name'] not in self.placed_items :

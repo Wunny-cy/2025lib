@@ -598,7 +598,7 @@ class VisionDetector:
                 # print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}")
                 confidence = float(score)
                 class_name = txt
-                if  confidence > 0.2 and self.label_correct(class_name) == label_name:
+                if  confidence > 0.2 and self.label_correct(class_name) == label_name and self.label_correct(class_name) in label_list:
                     x1, y1, x2, y2 = map(int, [box[0][0], box[0][1], box[2][0], box[2][1]])
                     position_2d = (x1, y1, x2, y2)
                     label_area = self.for_label_area(position_2d)

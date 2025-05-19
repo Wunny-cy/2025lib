@@ -1,5 +1,6 @@
 from serial_communication import SerialCommunication
 import time
+import cv2
 
 floor = 1
 
@@ -14,8 +15,9 @@ class Robot:
         self.placed_items = []
         self.vision_detector =detector  #VisionDetector()
         self.serial_comm = SerialCommunication()
+        # self.last = 1
         # self.DTG(1,1)
-        print("DTG")
+        # print("DTG")
         # time.sleep(3)
         # self.SVO(2, 50, 1000) 
         # self.SVO(3, 15, 1000) 
@@ -54,9 +56,9 @@ class Robot:
         if id not in [1, 2, 3, 4] or dir not in [0, 1]:
             raise ValueError("无效的电推杆编号或方向")
         self.serial_comm.send_command(f"DTG {id} {dir}")  # 控制电推杆
-        print(f"DTG{id}指令已发送")
+        print(f"DTG{id} {dir}指令已发送")
         self.serial_comm.check_ok()
-        print(f"DTG{id}指令已执行")
+        print(f"DTG{id} {dir}指令已执行")
         time.sleep(1)
 
     def SVO(self, id, angle, delay):
@@ -200,6 +202,75 @@ class Robot:
     
     # def arm_up(self):
     #     print(1)#待修改
+    def read_tof_list(self):
+        """
+        读取TOF传感器值，返回值为列表形式
+        
+        Returns:
+            list: 包含四个方向TOF值的列表 [前, 后, 左, 右]，读取失败则返回[-1, -1, -1, -1]
+        """
+        # 发送GD指令读取TOF传感器值
+        self.serial_comm.send_command("GD")
+        
+        # 等待有效响应
+        max_attempts = 3
+        attempts = 0
+        
+        while attempts < max_attempts:
+            response = self.serial_comm.read_response()
+            
+            # 检查是否是有效的TOF数据响应
+            if response.startswith("OK:F:"):
+                try:
+                    # 解析格式为 "OK:F:1112,B:247,L:2531,R:195" 的响应
+                    # 提取每个方向的值
+                    tof_values = [-1, -1, -1, -1]  # 默认值
+                    
+                    # 分割响应字符串
+                    parts = response.strip().split(',')
+                    
+                    for part in parts:
+                        if part.startswith("OK:F:"):
+                            tof_values[0] = int(part.split(':')[2])
+                        elif part.startswith("B:"):
+                            tof_values[1] = int(part.split(':')[1])
+                        elif part.startswith("L:"):
+                            tof_values[2] = int(part.split(':')[1])
+                        elif part.startswith("R:"):
+                            tof_values[3] = int(part.split(':')[1])
+                    
+                    print(f"TOF传感器值: 前={tof_values[0]}mm, 后={tof_values[1]}mm, 左={tof_values[2]}mm, 右={tof_values[3]}mm")
+                    return tof_values
+                    
+                except (ValueError, IndexError) as e:
+                    print(f"解析TOF值出错: {e}")
+                    attempts += 1
+            else:
+                # 不是有效的TOF数据响应，继续等待
+                attempts += 1
+                time.sleep(0.1)
+        
+        print("未能获取有效的TOF数据")
+        return [-1, -1, -1, -1]
+    
+    def move(self, x, y):
+        if x > 0:
+            self.serial_comm.send_command(f"FWD 400 {x}")
+            self.serial_comm.check_ok()
+            print(f"{x}已执行")
+        elif x < 0:
+            self.serial_comm.send_command(f"BWD 400 {-x}")
+            self.serial_comm.check_ok()
+            print(f"{x}已执行")
+
+        if y > 0:
+            self.serial_comm.send_command(f"LFT 400 {y}")
+            self.serial_comm.check_ok()
+            print(f"{y}已执行")
+        elif y < 0:
+            self.serial_comm.send_command(f"RGT 400 {-y}")
+            self.serial_comm.check_ok()
+            print(f"{y}已执行")
 
     def go_ahead(self):
         """
@@ -224,7 +295,7 @@ class Robot:
         print("前进检测指令已执行")
 
 
-    def slide_forward(self):
+    def go_forward(self):
         """
         控制机器人前进
         """
@@ -235,7 +306,7 @@ class Robot:
         self.serial_comm.check_ok()
         print("前进指令已执行")
 
-    def slide_backward(self):
+    def go_backward(self):
         """
         控制机器人后退
         """
@@ -283,10 +354,17 @@ class Robot:
         # 检测样品
         image = self.vision_detector.get_camera_image()# 获取图像
         sample_item = self.vision_detector.detect_sample(image)
-        if sample_item is None:
-            raise Exception("未能检测到样品物品")
+        sample1_item = self.vision_detector.detect_sample1(image)
+        if sample_item is True:
+            print("边缘检测方法检测到样品物品")
+            return sample_item
+        elif sample1_item is True:
+            print("YOLO方法检测到样品物品")
+            return sample1_item
+        else:
+            print("寄了 这分给了")
+            return False
         
-        return sample_item
         
     def collect_sample_items(self):
         """收集与模板匹配的物品"""
@@ -358,10 +436,8 @@ class Robot:
                     self.collect_second_level_drinks()
                     break
                 
-
     def handle_first_level_drinks(self):
         """将第一层待上架的饮料上架到第三层"""
-        self.slide_move(1,1)
         self.slide_floor_set1()
         self.travel()
         print("前进")
@@ -379,11 +455,10 @@ class Robot:
                     time.sleep(5)
                     #放置
                     self.grabed_items_place(drink['name'])
-                    self.placed_items.append(drink['name'])
                     print(f"已上架饮料: {self.placed_items}")
                     self.handle_first_level_drinks()
 
-    def label_change(self, label):
+    def label_change_CHtoEN(self, label):
         """
         设置需要更改的标签
         Args:
@@ -399,25 +474,9 @@ class Robot:
             return "jdb"
         else:
             return label  # 如果没有匹配的标签，返回原始标签
+        
     
-    # def name_to_label(self, name):
-    #     """
-    #     设置需要更改的标签
-    #     Args:
-    #         name: 需要更改的标签
-    #     """
-    #     if name == "riosmt":
-    #         name = "锐澳"
-    #     elif name == "dpty":
-    #         name = "东鹏"
-    #     elif name == "cp":
-    #         name = "茶Ⅱ"
-    #     elif name == "jdb":
-    #         name = "加多宝"
-
-    #     return name
-    
-    def grabed_items_place(self , label_name):
+    def grabed_items_place(self , label_name_EN):
         """检测标签位置，将抓取的饮料放置到指定位置"""
         self.travel()
         print("前进")
@@ -425,21 +484,50 @@ class Robot:
         while t == 0:
             image = self.vision_detector.get_camera_image()# 获取图像
             # 检测标签
-            detected_labels = self.vision_detector.detect_labels(image, self.label, label_name)
+            detected_labels = self.vision_detector.detect_labels(image, self.label, label_name_EN)
             for label in detected_labels:
                 print(f"检测到的标签: {label['name']}")
-                if label['ty'] and self.label_change(label['name']) == label_name and label['name'] not in self.placed_items :
+                if label['ty'] and self.label_change_CHtoEN(label['name']) == label_name_EN and label['name'] not in self.placed_items :
                     if label['x_offset'] < 0:
-                        self.slide_backward()
+                        self.go_backward()
+                        # self.last=-1
                     elif label['x_offset'] > 0:
-                        self.slide_forward()
+                        self.go_forward()
+                        # self.last=1
                     elif label['tx']:
                         #放置
+                        print(33333)
+                        cv2.imwrite('label.jpg', image)
                         self.stop()
+                        print("开始矫正")
+                        self.grabed_items_place_correct(label['name'])#输入中文标签
                         self.arm_place()
+                        self.placed_items.append(label['name'])
                         t = 1
                         break
                 break
+
+    def grabed_items_place_correct(self , label_name):
+        image = self.vision_detector.get_camera_image()# 获取图像
+        print(11111)
+        # 检测标签
+        detected_labels = self.vision_detector.detect_labels(image, self.label, label_name)
+        print(22222)
+        f = 0.4
+        for label in detected_labels:
+            print(f"二次检测到的标签: {label['name']}")
+            if label['ty'] and label['name'] == label_name and label['name'] not in self.placed_items :
+                if label['x_offset'] < 0:
+                    self.move(label['x_offset']*f,0)
+                    print('右移')
+                elif label['x_offset'] > 0:
+                    self.move(label['x_offset']*f,0)
+                    print('左移')
+                elif label['tx']:
+                    print("grabed_items_place_correct 6666")
+                    #放置
+                    self.stop()
+
 
     # def execute_task(self):
     #     """执行移动任务"""
@@ -480,14 +568,13 @@ class Robot:
             
         except Exception as e:
             print(f"任务执行出错: {str(e)}")
-        finally:
-            # 关闭串口连接
-            self.serial_comm.close()
+            self.stop()
 
     def execute_task2(self):
         """上架"""
         print("开始执行移动任务")
         try:
+            self.slide_move(1,1)
             self.handle_first_level_drinks()
 
             print("所有移动任务执行完成")
@@ -505,6 +592,8 @@ class Robot:
             self.go_ahead()
             # 识别初见物品
             sample_item = self.observe_sample_item()
+            if sample_item == False:
+                raise Exception("未检测到初见物品")
             print(f"检测到的样品物品: {sample_item}")
             
             # 收集样品物品

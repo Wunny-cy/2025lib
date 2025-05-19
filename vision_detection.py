@@ -8,7 +8,8 @@ from rapidocr import RapidOCR
 
 class VisionDetector:
     def __init__(self):
-        self.model = YOLO('best.pt')  
+        self.model = YOLO('drink.pt')  
+        self.sample_model = YOLO('sample.pt')
         self.ocr = RapidOCR()
         # 打开摄像头
         self.cap = cv2.VideoCapture(0)
@@ -265,7 +266,6 @@ class VisionDetector:
             return True
         else:
             return False
-
     
     def is_in_3(self, bbox):
         """
@@ -312,29 +312,6 @@ class VisionDetector:
             return True
         else:
             return False
-        
-    # def is_in_5(self, bbox):
-    #     """
-    #     判断目标是否在5区域
-    #     Args:
-    #         bbox: 边界框坐标 (x1, y1, x2, y2)
-    #     Returns:
-    #         bool: 是否在标签区域
-    #     """
-    #     x1, y1, x2, y2 = bbox
-    #     target_center_x = (x1 + x2) / 2
-    #     target_center_y = (y1 + y2) / 2
-        
-    #     # 定义中心区域(待定)
-    #     x51 =930 
-    #     y51 = 700
-    #     x52 = 1230
-    #     y52 = 900
-
-    #     if x51 < target_center_x < x52 and y51 < target_center_y < y52:
-    #         return True
-    #     else:
-    #         return False
 
     def for_label_area(self, bbox):
         """
@@ -391,10 +368,10 @@ class VisionDetector:
         x02 = 840
         y02 = 1460
 
-        x01 = x01 + 20
-        y01 = y01 + 20
-        x02 = x02 - 20
-        y02 = y02 - 20
+        # x01 = x01 + 20
+        # y01 = y01 + 20
+        # x02 = x02 - 20
+        # y02 = y02 - 20
         
         # 提取中心区域
         center_region = image[y01:y02, x01:x02]
@@ -404,15 +381,12 @@ class VisionDetector:
         
         # 应用双边滤波
         filtered = cv2.bilateralFilter(gray, 9, 75, 75)
-        cv2.imshow("Filtered", filtered)
         
         # 应用自适应阈值处理
-        thresh = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                        cv2.THRESH_BINARY, 11, 2)
-        cv2.imshow("Threshold", thresh)
+        thresh = cv2.adaptiveThreshold(filtered, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2)
 
         # Canny边缘检测
-        edges = cv2.Canny(thresh, 150, 200)  # 100和200是阈值
+        edges = cv2.Canny(thresh, 400, 500)  # 阈值
         cv2.imshow("Edges", edges)
         # 查找轮廓
         contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -427,11 +401,6 @@ class VisionDetector:
         # 获取轮廓的边界框
         x, y, w, h = cv2.boundingRect(max_contour)
         
-        # 在原图上绘制边界框
-        cv2.rectangle(center_region, (x, y), (x+w, y+h), (0, 255, 0), 2)
-
-        cv2.imshow("Center Region", center_region)
-        
         # 提取物品区域
         item_region = center_region[y:y+h, x:x+w]
         
@@ -443,6 +412,35 @@ class VisionDetector:
         print(f"模板已保存为 template.jpg，尺寸: {item_region.shape}")
         return True
         
+    def detect_sample1(self, image):
+        """
+        提取图像中心的物品并保存为模板图片
+        Returns:
+            bool: 是否成功保存模板
+        """
+        x01 = 600
+        y01 = 1030
+        x02 = 840
+        y02 = 1460
+
+        # 提取中心区域
+        center_region = image[y01:y02, x01:x02]
+
+        results = self.sample_model.predict(center_region)
+        if len(results) == 0:
+            print("未检测到物品")
+            return False
+        for result in results:
+                boxes = result.boxes
+                for box in boxes:
+                    # 获取边界框坐标
+                    x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                    template_region = center_region[int(y1):int(y2), int(x1):int(x2)]
+        # 保存模板图片
+        cv2.imwrite('template.jpg', template_region)
+        print(f"模板已保存为 template.jpg，尺寸: {template_region.shape}")
+        return True
+       
     
     def detect_sample_item(self):
         """
@@ -580,6 +578,23 @@ class VisionDetector:
             return "茶Ⅱ"
         else:
             return label  # 如果没有匹配的标签，返回原始标签
+        
+    def name_to_label(self, name):
+        """
+        设置需要更改的标签
+        Args:
+            name: 需要更改的标签
+        """
+        if name == "riosmt":
+            name = "锐澳"
+        elif name == "dpty":
+            name = "东鹏"
+        elif name == "cp":
+            name = "茶Ⅱ"
+        elif name == "jdb":
+            name = "加多宝"
+
+        return name
 
     def detect_labels(self, image, label_list, label_name):
         """
@@ -598,10 +613,11 @@ class VisionDetector:
                 # print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}")
                 confidence = float(score)
                 class_name = txt
-                if  confidence > 0.2 and self.label_correct(class_name) == label_name and self.label_correct(class_name) in label_list:
+                if  confidence > 0.2 and self.label_correct(class_name) == self.name_to_label(label_name) and self.label_correct(class_name) in label_list:
                     x1, y1, x2, y2 = map(int, [box[0][0], box[0][1], box[2][0], box[2][1]])
                     position_2d = (x1, y1, x2, y2)
                     label_area = self.for_label_area(position_2d)
+                    class_name= self.label_correct(class_name)
                     detected_label = {
                         'name': class_name,
                         'position_2d': position_2d,
@@ -615,9 +631,7 @@ class VisionDetector:
                     print(f"111:{converted_label}")
                     detected_labels.append(converted_label)
         return detected_labels
-
-
-
+    
 def test2():
     detector = VisionDetector()
     while True:

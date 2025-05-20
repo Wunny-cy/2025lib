@@ -4,6 +4,7 @@ import cv2
 
 floor = 1
 
+
 class Robot:
     def __init__(self,detector):
         print("初始化中。。。")

@@ -252,36 +252,53 @@ class Robot:
         
         print("未能获取有效的TOF数据")
         return [-1, -1, -1, -1]
-    
-    def move(self, x, y):
-        if x > 0:
-            self.serial_comm.send_command(f"FWD 400 {x}")
-            self.serial_comm.check_ok()
-            print(f"{x}已执行")
-        elif x < 0:
-            self.serial_comm.send_command(f"BWD 400 {-x}")
-            self.serial_comm.check_ok()
-            print(f"{x}已执行")
-
-        if y > 0:
-            self.serial_comm.send_command(f"LFT 400 {y}")
-            self.serial_comm.check_ok()
-            print(f"{y}已执行")
-        elif y < 0:
-            self.serial_comm.send_command(f"RGT 400 {-y}")
-            self.serial_comm.check_ok()
-            print(f"{y}已执行")
-
-    def go_ahead(self):
+    def MOVE(self, direction, speed, distance):
         """
-        控制机器人直行前进
+        控制机器人移动
+        Args:
+            direction: 移动方向 (0-前进, 1-后退, 2-左移, 3-右移)
+            speed: 移动速度 (1-1000，表示速度)
+            distance: 移动距离 (单位：毫米)
         """
-        # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
-        command = f"FWD 500 1100"
-        self.serial_comm.send_command(command)
-        print("前进指令已发送")
+        # 方向映射
+        direction_map = {
+            0: "FWD",  # 前进
+            1: "BWD",  # 后退
+            2: "LFT",  # 左移
+            3: "RGT"   # 右移
+        }
+        
+        # 验证方向参数
+        if direction not in direction_map:
+            raise ValueError("无效的方向，必须是0(前进)、1(后退)、2(左移)或3(右移)")
+        
+        # 获取方向指令
+        direction_cmd = direction_map[direction]
+        
+        # 验证速度参数
+        if not 1 <= speed <= 1000:
+            raise ValueError("无效的速度值，必须在1-1000之间")
+        
+        # 验证距离参数
+        if distance <= 0:
+            raise ValueError("无效的距离值，必须大于0")
+        
+        # 发送移动指令
+        self.serial_comm.send_command(f"{direction_cmd} {speed} {distance}")
+        print(f"{direction_cmd} {speed} {distance}指令已发送")
         self.serial_comm.check_ok()
-        print("前进指令已执行")
+        print(f"{direction_cmd} {speed} {distance}指令已执行")
+
+    # def go_ahead(self):
+    #     """
+    #     控制机器人直行前进
+    #     """
+    #     # 定义一个字符串变量command，值为"SQUARE"，表示机器人前进的指令
+    #     command = f"FWD 500 1100"
+    #     self.serial_comm.send_command(command)
+    #     print("前进指令已发送")
+    #     self.serial_comm.check_ok()
+    #     print("前进指令已执行")
 
     def travel(self):
         """
@@ -349,67 +366,56 @@ class Robot:
     def observe_sample_item(self):
         """观察高台小方桌上的样品物品"""
         # self.move_to_position(100, 100)
-        # # 获取图像
+        # 获取图像
         # image = self.vision_detector.get_camera_image()
         # 检测样品
         image = self.vision_detector.get_camera_image()# 获取图像
         sample_item = self.vision_detector.detect_sample(image)
-        sample1_item = self.vision_detector.detect_sample1(image)
-        if sample_item is True:
+        sample_item1 = self.vision_detector.detect_sample1(image)
+        if sample_item != False:
             print("边缘检测方法检测到样品物品")
             return sample_item
-        elif sample1_item is True:
+        elif sample_item1 != False:
             print("YOLO方法检测到样品物品")
-            return sample1_item
+            return sample_item1
         else:
             print("寄了 这分给了")
             return False
         
         
-    def collect_sample_items(self):
+    def collect_sample_items(self, template_result):
         """收集与模板匹配的物品"""
-        collected_count = 0
-        while collected_count < 2:
-            # 检测与模板匹配的物品
-            the_item = self.vision_detector.detect_sample_item()
-            
-            if the_item and the_item['confidence'] > 0.5:  # 设置置信度阈值
-                x1, y1, x2, y2 = the_item['position']
-                # 计算物品中心位置
-                center_x = (x1 + x2) // 2
-                center_y = (y1 + y2) // 2
-                if the_item['is_in_1']:
-                    # 停止机器人
-                    self.stop()
-                    # 勾取2层饮料
-                    self.hook_item1()
-                    collected_count += 1 
-                    print(f"已收集第 {collected_count} 个物品")
-                elif the_item['is_in_2']:
-                    # 停止机器人
-                    self.stop()
-                    # 勾取饮料
-                    self.hook_item2()
-                    collected_count += 1 
-                    print(f"已收集第 {collected_count} 个物品")
-                elif the_item['is_in_3']:
-                    # 停止机器人
-                    self.stop()
-                    # 移动到3层并抓取
-                    self.arm_collect()
-                    collected_count += 1 
-                    print(f"已收集第 {collected_count} 个物品")
-                elif the_item['is_in_4']:
-                    # 停止机器人
-                    self.stop()
-                    # 移动到1层并抓取
-                    self.arm_up()
-                    self.arm_collect()
-                    collected_count += 1 
-                    print(f"已收集第 {collected_count} 个物品")
+        if template_result and template_result['confidence'] > 0.5:  # 设置置信度阈值
+            if template_result['is_in_1']:
+                # 停止机器人
+                self.stop()
+                # 勾取2层饮料
+                self.hook_item1()
+                collected_count += 1 
+                print(f"已收集第 {collected_count} 个物品")
+            elif template_result['is_in_2']:
+                # 停止机器人
+                self.stop()
+                # 勾取饮料
+                self.hook_item2()
+                collected_count += 1 
+                print(f"已收集第 {collected_count} 个物品")
+            elif template_result['is_in_3']:
+                # 停止机器人
+                self.stop()
+                # 移动到3层并抓取
+                self.arm_collect()
+                collected_count += 1 
+                print(f"已收集第 {collected_count} 个物品")
+            elif template_result['is_in_4']:
+                # 停止机器人
+                self.stop()
+                # 移动到1层并抓取
+                self.arm_up()
+                self.arm_collect()
+                collected_count += 1 
+                print(f"已收集第 {collected_count} 个物品")
 
-
-            
             # 短暂延迟，避免过于频繁的检测
             time.sleep(0.1)
         
@@ -589,24 +595,50 @@ class Robot:
         """初见物品"""
         print("开始执行移动任务")
         try:
-            self.go_ahead()
-            # 识别初见物品
-            sample_item = self.observe_sample_item()
-            if sample_item == False:
+            self.MOVE(0,1000,1100)
+            # 识别初见物品1
+            sample_item1 = self.observe_sample_item()
+            if sample_item1 == False:
                 raise Exception("未检测到初见物品")
-            print(f"检测到的样品物品: {sample_item}")
+            else :
+                cv2.imwrite('template1.jpg', sample_item1)
+                print(f"检测到的样品物品1: {sample_item1}")
             
-            # 收集样品物品
-            self.collect_sample_items()
+            self.MOVE(0,1000,1100)
+            self.RT(90)
+            self.MOVE(0,1000,2000)
+            self.RT(90)
+            self.MOVE(0,1000,1100)
+            # 识别初见物品2
+            sample_item2 = self.observe_sample_item()
+            if sample_item2 == False:
+                raise Exception("未检测到初见物品")
+            else :
+                cv2.imwrite('template2.jpg', sample_item2)
+                print(f"检测到的样品物品2: {sample_item2}")
+            
+            collected_count = 0
+            # 读取模板图像
+            template1 = cv2.imread('template1.jpg', cv2.IMREAD_GRAYSCALE)
+            template2 = cv2.imread('template2.jpg', cv2.IMREAD_GRAYSCALE)
+            if template1 is None and template2 is None:
+                raise Exception("无法读取模板图像")
+            while collected_count < 2:
+                # 检测与模板匹配的物品
+                the_item = self.vision_detector.detect_sample_item(template1, template2)
+                template1_result = the_item['template1']
+                template2_result = the_item['template2']
+                # 收集样品物品
+                if template1_result== True:
+                    self.collect_sample_items(template1_result)
+                    break
+                elif template2_result == True:
+                    self.collect_sample_items(template2_result)
+                    break
             print(f"最终收集的物品: {self.collected_items}")
-            
-            print("所有移动任务执行完成")
             
         except Exception as e:
             print(f"任务执行出错: {str(e)}")
-        finally:
-            # 关闭串口连接
-            self.serial_comm.close()
 
 # if __name__ == "__main__":
 #     robot = Robot()

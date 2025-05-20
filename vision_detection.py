@@ -404,13 +404,13 @@ class VisionDetector:
         # 提取物品区域
         item_region = center_region[y:y+h, x:x+w]
         
-        # 保存模板图片
-        cv2.imwrite('template.jpg', item_region)
+        # # 保存模板图片
+        # cv2.imwrite('template.jpg', item_region)
         
         cv2.waitKey(1)
         
-        print(f"模板已保存为 template.jpg，尺寸: {item_region.shape}")
-        return True
+        # print(f"模板已保存为 template.jpg，尺寸: {item_region.shape}")
+        return item_region
         
     def detect_sample1(self, image):
         """
@@ -442,19 +442,13 @@ class VisionDetector:
         return True
        
     
-    def detect_sample_item(self):
+    def detect_sample_item(self, template1, template2):
         """
         检测到与模板匹配的物体时画出边界框
         Returns:
             dict: 包含位置和置信度的字典，如果检测失败返回None
         """
         try:
-            # 读取模板图像
-            template = cv2.imread('template.jpg', cv2.IMREAD_GRAYSCALE)
-            if template is None:
-                print("错误：无法读取模板图像")
-                return None
-
             # 获取摄像头图像
             frame = self.get_camera_image()
 
@@ -463,24 +457,32 @@ class VisionDetector:
 
             # 创建SIFT对象
             sift = cv2.SIFT_create()
-            kp1, des1 = sift.detectAndCompute(template, None)
-            kp2, des2 = sift.detectAndCompute(gray, None)
+            kp0, des0 = sift.detectAndCompute(gray, None)
+            kp1, des1 = sift.detectAndCompute(template1, None)
 
             # BFMatcher进行特征点匹配
             bf = cv2.BFMatcher()
-            matches = bf.knnMatch(des1, des2, k=2)
+            matches = bf.knnMatch(des1, des0, k=2)
 
             # 选取优秀匹配点
-            good = []
+            good1 = []
             for m, n in matches:
                 if m.distance < 0.75 * n.distance:
-                    good.append(m)
+                    good1.append(m)
 
-            if len(good) > 4:
-                src_pts = np.float32([kp1[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-                dst_pts = np.float32([kp2[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+            kp2, des2 = sift.detectAndCompute(template2, None)
+            matches2 = bf.knnMatch(des2, des0, k=2)
+
+            good2 = []
+            for m, n in matches:
+                if m.distance < 0.75 * n.distance:
+                    good2.append(m)
+
+            if len(good1) > 4:
+                src_pts = np.float32([kp1[m.queryIdx].pt for m in good1]).reshape(-1, 1, 2)
+                dst_pts = np.float32([kp0[m.trainIdx].pt for m in good1]).reshape(-1, 1, 2)
                 M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-                h, w = template.shape
+                h, w = template1.shape
                 pts = np.float32([[0,0],[0,h-1],[w-1,h-1],[w-1,0]]).reshape(-1,1,2)
                 dst = cv2.perspectiveTransform(pts, M)
                 
@@ -490,13 +492,6 @@ class VisionDetector:
                 x1, x2 = min(x_coords), max(x_coords)
                 y1, y2 = min(y_coords), max(y_coords)
                 
-                # 在原图上绘制矩形框
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 3)
-                
-                # 添加文本标签
-                cv2.putText(frame, 'Matched Area', (x1, y1-10), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-
                 # 显示结果
                 # cv2.imshow('Detection Result', frame)
                 cv2.waitKey(1)  # 等待1毫秒
@@ -507,18 +502,46 @@ class VisionDetector:
                 t4 = self.is_in_4(position_2d)
                 
                 # 返回匹配区域的位置信息
-                result = {
+                result1 = {
                     'position': position_2d,
-                    'confidence': len(good) / len(matches) if len(matches) > 0 else 0,
+                    'confidence': len(good1) / len(matches) if len(matches) > 0 else 0,
                     'is_in_1': t1,
                     'is_in_2': t2,
                     'is_in_3': t3,
                     'is_in_4': t4
                 }
-                return result
             else:
-                print("警告：未找到足够的匹配点")
-                return None
+                result1 = None
+
+            if len(good2) > 4:
+                src_pts = np.float32([kp2[m.queryIdx].pt for m in good2]).reshape(-1, 1, 2)
+                dst_pts = np.float32([kp0[m.trainIdx].pt for m in good2]).reshape(-1, 1, 2)
+
+                M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+                h, w = template2.shape
+                pts = np.float32([[0, 0], [0, h - 1], [w - 1, h - 1], [w - 1, 0]]).reshape(-1, 1, 2)
+                dst = cv2.perspectiveTransform(pts, M)
+
+                position2d = (x1, y1, x2, y2)
+                t1 = self.is_in_1(position2d)
+                t2 = self.is_in_2(position2d)
+                t3 = self.is_in_3(position2d)
+                t4 = self.is_in_4(position2d)
+
+                result2 = {
+                    'position': position2d,
+                    'confidence': len(good2) / len(matches2) if len(matches2) > 0 else 0,
+                    'is_in_1': t1,
+                    'is_in_2': t2,
+                    'is_in_3': t3,
+                    'is_in_4': t4
+                }
+            else:
+                result2 = None
+
+
+            # 返回匹配区域的位置信息
+            return {'template1': result1, 'template2': result2}
 
         except Exception as e:
             print(f"检测过程中出错: {str(e)}")
@@ -636,7 +659,7 @@ def test2():
     detector = VisionDetector()
     while True:
         image = detector.get_camera_image()
-        detector.detect_sample(image)
+        detector.detect_sample_item(image)
 
 if __name__ == "__main__":
     test2()

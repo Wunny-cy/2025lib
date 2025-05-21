@@ -2,7 +2,7 @@ import serial
 import time
 
 class SerialCommunication:
-    def __init__(self, port='COM19', baudrate=115200):
+    def __init__(self, port='COM22', baudrate=115200):
         """
         初始化串口通信
         Args:
@@ -86,8 +86,8 @@ class SerialCommunication:
         读取机器人返回的数据
         Returns:
             str: 返回的数据
-        """
-        time.sleep(0.1)
+        # """
+        # time.sleep(0.1)
         try:
             if self.serial.in_waiting:
                 response = self.serial.readline().decode().strip()

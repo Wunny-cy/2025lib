@@ -14,15 +14,17 @@ def main():
     detection_thread = threading.Thread(target=show)
     detection_thread.start()
     while detector == None: #等待初始化完成
-        time.sleep(0.1)    
+        time.sleep(0.1)
     robot = Robot(detector)
-    # robot.DTG(2,1)
-    time.sleep(1)
+    # time.sleep(1)
     
-    # robot.execute_task1()
-    # robot.execute_task2()
-    robot.execute_task3()
-    # robot.execute_task()
+    dir = 0
+    robot.MOVE(2, 1000, 200)
+    # robot.execute_task1(dir)
+    robot.execute_task2(dir)
+    # robot.execute_task3()
+    
+    robot.execute_task(dir)
 
     detection_thread.join()
 

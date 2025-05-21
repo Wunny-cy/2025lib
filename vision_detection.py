@@ -45,44 +45,44 @@ class VisionDetector:
                 height, width = frame.shape[:2]
                 
                 # 绘制0区域矩形框（蓝色）
-                x01 = 600
+                x01 = 750
                 y01 = 1030
-                x02 = 840
+                x02 = 990
                 y02 = 1460
                 cv2.rectangle(frame, (x01, y01), (x02, y02), (255, 0, 0), 3)  # 蓝色矩形框
                 
                 # 绘制1区域矩形框（蓝色）
-                x11 =30
+                x11 =180
                 y11 = 950
-                x12 = 230
+                x12 = 380
                 y12 = 1400
                 cv2.rectangle(frame, (x11, y11), (x12, y12), (255, 0, 0), 5)  # 蓝色矩形框
                 
                 # 绘制2区域矩形框（蓝色）
-                x21 =30
+                x21 =180
                 y21 = 1500
-                x22 = 280
+                x22 = 430
                 y22 = 2100
                 cv2.rectangle(frame, (x21, y21), (x22, y22), (255, 0, 0), 5)  # 蓝色矩形框
                 
                 # 绘制3区域矩形框（蓝色）
-                x31 =780
+                x31 =930
                 y31 = 150
-                x32 = 1090
+                x32 = 1240
                 y32 = 650
                 cv2.rectangle(frame, (x31, y31), (x32, y32), (255, 0, 0), 5)  # 蓝色矩形框
                 
                 # 绘制4区域矩形框（蓝色）
-                x41 =850
+                x41 =880
                 y41 = 1550
-                x42 = 1000
+                x42 = 1110
                 y42 = 2000
                 cv2.rectangle(frame, (x41, y41), (x42, y42), (255, 0, 0), 5)  # 蓝色矩形框
 
                 # 绘制5区域矩形框（蓝色）
-                x51 =1000
+                x51 =650
                 y51 = 650
-                x52 = 1160
+                x52 = 790
                 y52 = 850
                 cv2.rectangle(frame, (x51, y51), (x52, y52), (255, 0, 0), 5)  # 蓝色矩形框
                 cv2.line(frame, (0,y51), (width,y51), (255, 0, 0), 5)  # 蓝色水平线
@@ -212,9 +212,9 @@ class VisionDetector:
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域
-        x11 =30
+        x11 =180
         y11 = 950
-        x12 = 230
+        x12 = 380
         y12 = 1400
         
         # # 计算相对于中心区域的偏移量
@@ -257,9 +257,9 @@ class VisionDetector:
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域(待定)
-        x21 =30
+        x21 =180
         y21 = 1500
-        x22 = 280
+        x22 = 430
         y22 = 2100
         
         if x21 < target_center_x < x22 and y21 < target_center_y < y22:
@@ -280,9 +280,9 @@ class VisionDetector:
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域(待定)
-        x31 =780
+        x31 =930
         y31 = 150
-        x32 = 1090
+        x32 = 1240
         y32 = 650
         
         if x31 < target_center_x < x32 and y31 < target_center_y < y32:
@@ -303,9 +303,9 @@ class VisionDetector:
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域(待定)
-        x41 =850
+        x41 =880
         y41 = 1550
-        x42 = 1000
+        x42 = 1110
         y42 = 2000
 
         if x41 < target_center_x < x42 and y41 < target_center_y < y42:
@@ -326,9 +326,9 @@ class VisionDetector:
         center_y = (y1 + y2) / 2
         
         # 定义中心区域(待定)
-        x51 =1000 
+        x51 =650
         y51 = 650
-        x52 = 1160
+        x52 = 790
         y52 = 850
 
         tx = False
@@ -363,9 +363,9 @@ class VisionDetector:
         Returns:
             bool: 是否成功保存模板
         """
-        x01 = 600
+        x01 = 750
         y01 = 1030
-        x02 = 840
+        x02 = 990
         y02 = 1460
 
         # x01 = x01 + 20
@@ -418,9 +418,9 @@ class VisionDetector:
         Returns:
             bool: 是否成功保存模板
         """
-        x01 = 600
+        x01 = 750
         y01 = 1030
-        x02 = 840
+        x02 = 990
         y02 = 1460
 
         # 提取中心区域
@@ -441,7 +441,6 @@ class VisionDetector:
         print(f"模板已保存为 template.jpg，尺寸: {template_region.shape}")
         return True
        
-    
     def detect_sample_item(self, template1, template2):
         """
         检测到与模板匹配的物体时画出边界框

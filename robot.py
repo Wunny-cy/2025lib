@@ -654,14 +654,14 @@ class Robot:
             p=p+t
             t=0
             if p ==2 or p==4 or p==0:
-                self.SVO(2, 50, 1000) 
+                self.SVO(2, 125, 1000) 
                 self.DTG(1,0)
                 self.RT(90)
                 self.MOVE(0,1000,2000)
                 self.RT(90)
                 dir=1
             elif p == 1 or p == 3:
-                self.SVO(2, 50, 1000) 
+                self.SVO(2, 125, 1000) 
                 self.DTG(1,0)
                 self.RT(-90)
                 self.MOVE(1,1000,2000)

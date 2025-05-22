@@ -422,13 +422,11 @@ class Robot:
             # 短暂延迟，避免过于频繁的检测
             time.sleep(0.1)
         
-    def collect_second_level_drinks(self,dir):
+    def collect_second_level_drinks(self,dir,t):
         """从第二层收集指定饮料"""
         # 控制机器人绕货架前进
         self.travel(dir)
         print(f"绕货架{dir}前进")
-        t=0
-        
         while len(self.collected_items) < len(self.target_drinks) and t<3:
             # 读取TOF传感器数据
             tof_values = self.read_tof_list()
@@ -448,12 +446,9 @@ class Robot:
                     self.hook_item1()
                     self.collected_items.append(drink['name'])
                     print(f"已收集饮料: {self.collected_items}")
-                if len(self.collected_items) >= len(self.target_drinks):
-                    print("所有目标饮料已收集完毕")
-                    return dir  # 收集完成，退出函数
                 
                 # 递归调用并处理返回值
-                result_dir = self.collect_second_level_drinks(dir)
+                result_dir = self.collect_second_level_drinks(dir,t)
                 return result_dir  # 将递归调用的结果向上传递
 
             if dir == 1 and front_tof <= self.FRONT_TOF_THRESHOLD:
@@ -461,24 +456,25 @@ class Robot:
                     self.stop()
                     dir = 1-dir
                     self.travel(dir)
-                    t += 1
+                    t = t + 1
                     print(f'1t: {t}')
             elif dir == 0 and back_tof <= self.BACK_TOF_THRESHOLD:
                     print(f"后方TOF值 {back_tof} <= {self.BACK_TOF_THRESHOLD}，停止后退")
                     self.stop()
                     dir = 1-dir
                     self.travel(dir)
-                    t += 1
+                    t = t + 1
                     print(f'1t: {t}')
 
             if t >= 2:
                 print(f'2t: {t}')
+                t = 0
                 return dir
+        return dir
             
                 
-    def handle_first_level_drinks(self, dir):
+    def handle_first_level_drinks(self, dir, t):
         """将第一层待上架的饮料上架到第三层"""
-        t=0#检测tof次数
         self.travel(dir)
         print(111111111)
         while len(self.placed_items) < len(self.shelf_drinks) and t<3:
@@ -514,9 +510,9 @@ class Robot:
                         # self.MOVE(2, 1000, 20)
                         self.slide_floor_set(3)
                         time.sleep(5)
-                        self.grabed_items_place(drink['name'], dir) #放置
+                        self.grabed_items_place(drink['name'], dir, t) #放置
                         print(f"已上架饮料: {self.placed_items}")
-                        self.handle_first_level_drinks(dir)
+                        self.handle_first_level_drinks(dir, t)
                         
             if t >= 2:
                 print(f'2t: {t}')
@@ -540,11 +536,10 @@ class Robot:
             return label  # 如果没有匹配的标签，返回原始标签
         
     
-    def grabed_items_place(self , label_name_EN, dir):
+    def grabed_items_place(self , label_name_EN, dir, t):
         """检测标签位置，将抓取的饮料放置到指定位置"""
         # self.travel(dir)
         p = 0#条件
-        t = 0#读tof次数
         image = self.vision_detector.get_camera_image()# 获取图像
         # 检测标签
         detected_labels = self.vision_detector.detect_labels(image, self.label, label_name_EN)
@@ -571,17 +566,20 @@ class Robot:
             tof_values = self.read_tof_list()
             front_tof = tof_values[0]
             back_tof = tof_values[1]
-            t = t + 1
             if dir == 1 and front_tof <= self.FRONT_TOF_THRESHOLD:
                 print(f"前方TOF值 {front_tof} <= {self.FRONT_TOF_THRESHOLD}，停止前进")
                 self.stop()
                 dir = 1-dir
                 self.travel(dir)
+                t = t + 1
+                print(f'1t: {t}')
             elif dir == 0 and back_tof <= self.BACK_TOF_THRESHOLD:
                 print(f"后方TOF值 {back_tof} <= {self.BACK_TOF_THRESHOLD}，停止后退")
                 self.stop()
                 dir = 1-dir
                 self.travel(dir)
+                t += t + 1
+                print(f'1t: {t}')
             else:
                 image = self.vision_detector.get_camera_image()# 获取图像
                 # 检测标签
@@ -605,10 +603,17 @@ class Robot:
                             # x_last -= label['x_offset']
                             if t != 0:
                                 self.grabed_items_place_correct(label['name'])#输入中文标签
+                            else:
+                                self.MOVE(1,500,120)
                             self.arm_place()
                             self.placed_items.append(label['name'])
                             self.slide_floor_set1()
                             p = 1
+            
+            if t >= 2:
+                print(f'2t: {t}')
+                t=0
+                return dir
 
     def grabed_items_place_correct(self , label_name):
         image = self.vision_detector.get_camera_image()# 获取图像
@@ -642,10 +647,15 @@ class Robot:
         try:
             self.MOVE(2, 1000, 210)
             dir=0
-            dir = self.collect_second_level_drinks(dir)
+            t=0
+            dir = self.collect_second_level_drinks(dir,t)
             print(555555555)
-            dir = self.handle_first_level_drinks(dir)
+            t=0
+            dir = self.handle_first_level_drinks(dir, t)
             print(666666666)
+            
+
+
             self.stop()
             
         except Exception as e:
@@ -663,7 +673,8 @@ class Robot:
         try:
             # while len(self.collected_items) < len(self.target_drinks):
                 # 收集第二层饮料，传递方向参数
-            self.collect_second_level_drinks(dir)
+            t=0
+            self.collect_second_level_drinks(dir, t)
                 # print(f"已收集的饮料: {self.collected_items}")
             self.stop()
                 # print("移动任务执行完成，准备继续移动至指定位置")
@@ -726,7 +737,8 @@ class Robot:
         print("开始执行移动任务")
         try:
             # self.slide_move(1,1)
-            self.handle_first_level_drinks(dir)
+            t=0
+            self.handle_first_level_drinks(dir, t)
 
             print("所有移动任务执行完成")
             self.stop()

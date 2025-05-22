@@ -492,14 +492,12 @@ class Robot:
                     print(f"前方TOF值 {front_tof} <= {self.FRONT_TOF_THRESHOLD}，停止前进")
                     self.stop()
                     dir = 1-dir
-                    self.travel(dir)
                     t += 1
                     print(f'1t: {t}')
             elif dir == 0 and back_tof <= self.BACK_TOF_THRESHOLD:
                     print(f"后方TOF值 {back_tof} <= {self.BACK_TOF_THRESHOLD}，停止后退")
                     self.stop()
                     dir = 1-dir
-                    self.travel(dir)
                     t += 1
                     print(f'1t: {t}')
             else:
@@ -643,7 +641,7 @@ class Robot:
         """执行移动任务"""
         print("开始执行移动任务")
         try:
-            self.MOVE(2, 1000, 210)
+            self.MOVE(2, 1000, 190)
             dir=0
             t=0
             p=0

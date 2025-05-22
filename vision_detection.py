@@ -44,49 +44,49 @@ class VisionDetector:
                 # 获取图像中心点
                 height, width = frame.shape[:2]
                 
-                # 绘制0区域矩形框（蓝色）
-                x01 = 750
-                y01 = 1030
-                x02 = 990
-                y02 = 1460
-                cv2.rectangle(frame, (x01, y01), (x02, y02), (255, 0, 0), 3)  # 蓝色矩形框
+                # # 绘制0区域矩形框（蓝色）
+                # x01 = 750
+                # y01 = 1030
+                # x02 = 990
+                # y02 = 1460
+                # cv2.rectangle(frame, (x01, y01), (x02, y02), (255, 0, 0), 3)  # 蓝色矩形框
                 
-                # 绘制1区域矩形框（蓝色）
-                x11 =180
-                y11 = 950
-                x12 = 380
-                y12 = 1400
-                cv2.rectangle(frame, (x11, y11), (x12, y12), (255, 0, 0), 5)  # 蓝色矩形框
+                # # 绘制1区域矩形框（蓝色）
+                # x11 =180
+                # y11 = 950
+                # x12 = 380
+                # y12 = 1400
+                # cv2.rectangle(frame, (x11, y11), (x12, y12), (255, 0, 0), 5)  # 蓝色矩形框
                 
-                # 绘制2区域矩形框（蓝色）
-                x21 =180
-                y21 = 1500
-                x22 = 430
-                y22 = 2100
-                cv2.rectangle(frame, (x21, y21), (x22, y22), (255, 0, 0), 5)  # 蓝色矩形框
+                # # 绘制2区域矩形框（蓝色）
+                # x21 =180
+                # y21 = 1500
+                # x22 = 430
+                # y22 = 2100
+                # cv2.rectangle(frame, (x21, y21), (x22, y22), (255, 0, 0), 5)  # 蓝色矩形框
                 
-                # 绘制3区域矩形框（蓝色）
-                x31 =930
-                y31 = 150
-                x32 = 1240
-                y32 = 650
-                cv2.rectangle(frame, (x31, y31), (x32, y32), (255, 0, 0), 5)  # 蓝色矩形框
+                # # 绘制3区域矩形框（蓝色）
+                # x31 =930
+                # y31 = 150
+                # x32 = 1240
+                # y32 = 650
+                # cv2.rectangle(frame, (x31, y31), (x32, y32), (255, 0, 0), 5)  # 蓝色矩形框
                 
-                # 绘制4区域矩形框（蓝色）
-                x41 =880
-                y41 = 1550
-                x42 = 1110
-                y42 = 2000
-                cv2.rectangle(frame, (x41, y41), (x42, y42), (255, 0, 0), 5)  # 蓝色矩形框
+                # # 绘制4区域矩形框（蓝色）
+                # x41 =880
+                # y41 = 1550
+                # x42 = 1110
+                # y42 = 2000
+                # cv2.rectangle(frame, (x41, y41), (x42, y42), (255, 0, 0), 5)  # 蓝色矩形框
 
-                # 绘制5区域矩形框（蓝色）
-                x51 =650
-                y51 = 650
-                x52 = 790
-                y52 = 850
-                cv2.rectangle(frame, (x51, y51), (x52, y52), (255, 0, 0), 5)  # 蓝色矩形框
-                cv2.line(frame, (0,y51), (width,y51), (255, 0, 0), 5)  # 蓝色水平线
-                cv2.line(frame, (0,y52), (width,y52), (255, 0, 0), 5)  # 蓝色水平线
+                # # 绘制5区域矩形框（蓝色）
+                # x51 =650
+                # y51 = 650
+                # x52 = 790
+                # y52 = 850
+                # cv2.rectangle(frame, (x51, y51), (x52, y52), (255, 0, 0), 5)  # 蓝色矩形框
+                # cv2.line(frame, (0,y51), (width,y51), (255, 0, 0), 5)  # 蓝色水平线
+                # cv2.line(frame, (0,y52), (width,y52), (255, 0, 0), 5)  # 蓝色水平线
 
                 # 运行模型检测
                 results = self.model.predict(frame)
@@ -567,7 +567,7 @@ class VisionDetector:
                 class_name = result.names[class_id]
                 # print(class_name)
                 
-                if class_name in target_drinks and confidence > 0.5:
+                if class_name in target_drinks and confidence > 0.3:
                     x1, y1, x2, y2 = map(int, box.xyxy[0].cpu().numpy())
                     position_2d = (x1, y1, x2, y2)
                     t1 = self.is_in_1(position_2d)
@@ -623,7 +623,8 @@ class VisionDetector:
         检测指定标签并返回坐标
         Args:
             image: 输入图像
-            label: 需要检测的标签
+            label_list: 需要检测的标签列表
+            label_name: 需要检测的标签名称
         Returns:
             list: 检测到的标签位置列表
         """
@@ -635,7 +636,7 @@ class VisionDetector:
                 # print(f"{box}Recognized text: {txt}, Confidence: {score:.2f}")
                 confidence = float(score)
                 class_name = txt
-                if  confidence > 0.2 and self.label_correct(class_name) == self.name_to_label(label_name) and self.label_correct(class_name) in label_list:
+                if  confidence > 0.3 and self.label_correct(class_name) == self.name_to_label(label_name) and self.label_correct(class_name) in label_list:
                     x1, y1, x2, y2 = map(int, [box[0][0], box[0][1], box[2][0], box[2][1]])
                     position_2d = (x1, y1, x2, y2)
                     label_area = self.for_label_area(position_2d)

@@ -18,13 +18,13 @@ def main():
     robot = Robot(detector)
     # time.sleep(1)
     
-    dir = 0
-    robot.MOVE(2, 1000, 200)
+    # dir = 0
+    # robot.MOVE(2, 1000, 200)
     # robot.execute_task1(dir)
-    robot.execute_task2(dir)
+    # robot.execute_task2(dir)
     # robot.execute_task3()
     
-    robot.execute_task(dir)
+    robot.execute_task()
 
     detection_thread.join()
 

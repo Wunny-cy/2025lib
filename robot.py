@@ -449,7 +449,7 @@ class Robot:
                 
                 # 递归调用并处理返回值
                 result_dir = self.collect_second_level_drinks(dir,t)
-                return result_dir  # 将递归调用的结果向上传递
+                return result_dir, t  # 将递归调用的结果向上传递
 
             if dir == 1 and front_tof <= self.FRONT_TOF_THRESHOLD:
                     print(f"前方TOF值 {front_tof} <= {self.FRONT_TOF_THRESHOLD}，停止前进")
@@ -469,8 +469,9 @@ class Robot:
             if t >= 2:
                 print(f'2t: {t}')
                 t = 0
-                return dir
-        return dir
+                return dir,t
+            
+        return dir,t
             
                 
     def handle_first_level_drinks(self, dir, t):
@@ -510,13 +511,13 @@ class Robot:
                         # self.MOVE(2, 1000, 20)
                         self.slide_floor_set(3)
                         time.sleep(5)
-                        self.grabed_items_place(drink['name'], dir, t) #放置
+                        dir, t=self.grabed_items_place(drink['name'], dir, t) #放置
                         print(f"已上架饮料: {self.placed_items}")
                         self.handle_first_level_drinks(dir, t)
                         
             if t >= 2:
                 print(f'2t: {t}')
-                return dir
+                return dir, t
                 
     def label_change_CHtoEN(self, label):
         """
@@ -610,10 +611,7 @@ class Robot:
                             self.slide_floor_set1()
                             p = 1
             
-            if t >= 2:
-                print(f'2t: {t}')
-                t=0
-                return dir
+        return dir,t
 
     def grabed_items_place_correct(self , label_name):
         image = self.vision_detector.get_camera_image()# 获取图像
@@ -648,13 +646,34 @@ class Robot:
             self.MOVE(2, 1000, 210)
             dir=0
             t=0
-            dir = self.collect_second_level_drinks(dir,t)
+            p=0
+            # dir, t = self.collect_second_level_drinks(dir, t)
             print(555555555)
+            p=p+t
             t=0
-            dir = self.handle_first_level_drinks(dir, t)
+            dir, t = self.handle_first_level_drinks(dir, t)
             print(666666666)
-            
-
+            p=p+t
+            t=0
+            if p ==2 or p==4 or p==0:
+                self.RT(90)
+                self.MOVE(0,1000,2000)
+                self.RT(90)
+                dir=1
+            elif p == 1 or p == 3:
+                self.RT(-90)
+                self.MOVE(1,1000,2000)
+                self.RT(-90)
+                dir=0
+            t=0
+            dir, t = self.collect_second_level_drinks(dir, t)
+            print(555555555)
+            p=p+t
+            t=0
+            dir, t = self.handle_first_level_drinks(dir, t)
+            print(666666666)
+            p=p+t
+            t=0
 
             self.stop()
             

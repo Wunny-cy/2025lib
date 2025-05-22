@@ -21,7 +21,7 @@ class Robot:
         self.slide_floor_set1()
         self.SVO(2, 50, 1000) 
         # self.SVO(3, 15, 1000) 
-        self.SVO(4, 85, 1000)
+        # self.SVO(4, 85, 1000)
         print("初始化完成")
         
     def DTG(self, id, dir):
@@ -202,46 +202,38 @@ class Robot:
         # 发送GD指令读取TOF传感器值
         self.serial_comm.send_command("GD")
         
-        # 等待有效响应
-        max_attempts = 3
-        attempts = 0
-        
-        while attempts < max_attempts:
+        while True:
             response = self.serial_comm.read_response()
+            print(response)
+            if response != None and "ok" in response.lower():
+                break
+            time.sleep(0.1)
+        
+        # 检查是否是有效的TOF数据响应
+        if response.startswith("OK:F:"):
+            # 解析格式为 "OK:F:1112,B:247,L:2531,R:195" 的响应
+            # 提取每个方向的值
+            tof_values = [1000, 1000, 1000, 1000]  # 默认值
             
-            # 检查是否是有效的TOF数据响应
-            if response.startswith("OK:F:"):
-                try:
-                    # 解析格式为 "OK:F:1112,B:247,L:2531,R:195" 的响应
-                    # 提取每个方向的值
-                    tof_values = [-1, -1, -1, -1]  # 默认值
-                    
-                    # 分割响应字符串
-                    parts = response.strip().split(',')
-                    
-                    for part in parts:
-                        if part.startswith("OK:F:"):
-                            tof_values[0] = int(part.split(':')[2])
-                        elif part.startswith("B:"):
-                            tof_values[1] = int(part.split(':')[1])
-                        elif part.startswith("L:"):
-                            tof_values[2] = int(part.split(':')[1])
-                        elif part.startswith("R:"):
-                            tof_values[3] = int(part.split(':')[1])
-                    
-                    print(f"TOF传感器值: 前={tof_values[0]}mm, 后={tof_values[1]}mm, 左={tof_values[2]}mm, 右={tof_values[3]}mm")
-                    return tof_values
-                    
-                except (ValueError, IndexError) as e:
-                    print(f"解析TOF值出错: {e}")
-                    attempts += 1
-            else:
-                # 不是有效的TOF数据响应，继续等待
-                attempts += 1
-                time.sleep(0.1)
+            # 分割响应字符串
+            parts = response.strip().split(',')
+            
+            for part in parts:
+                if part.startswith("OK:F:"):
+                    tof_values[0] = int(part.split(':')[2])
+                elif part.startswith("B:"):
+                    tof_values[1] = int(part.split(':')[1])
+                elif part.startswith("L:"):
+                    tof_values[2] = int(part.split(':')[1])
+                elif part.startswith("R:"):
+                    tof_values[3] = int(part.split(':')[1])
+            
+            print(f"TOF传感器值: 前={tof_values[0]}mm, 后={tof_values[1]}mm, 左={tof_values[2]}mm, 右={tof_values[3]}mm")
+            return tof_values
+            
         
         print("未能获取有效的TOF数据")
-        return [-1, -1, -1, -1]
+        return [1000, 1000, 1000, 1000]
     def MOVE(self, direction, speed, distance):
         """
         控制机器人移动
@@ -486,7 +478,7 @@ class Robot:
                 
     def handle_first_level_drinks(self, dir):
         """将第一层待上架的饮料上架到第三层"""
-        t=0
+        t=0#检测tof次数
         self.travel(dir)
         print(111111111)
         while len(self.placed_items) < len(self.shelf_drinks) and t<3:
@@ -519,7 +511,7 @@ class Robot:
                     if drink['is_in_4'] and drink['name'] not in self.placed_items:
                         self.stop()
                         self.arm_grab()
-                        self.MOVE(2, 1000, 20)
+                        # self.MOVE(2, 1000, 20)
                         self.slide_floor_set(3)
                         time.sleep(5)
                         self.grabed_items_place(drink['name'], dir) #放置
@@ -565,7 +557,7 @@ class Robot:
                 self.stop()
                 print("开始矫正")
                 cv2.imwrite('label1.jpg', image)
-                self.grabed_items_place_correct(label['name'], dir, t)#输入中文标签
+                self.grabed_items_place_correct(label['name'])#输入中文标签
                 self.arm_place()
                 self.placed_items.append(label['name'])
                 self.slide_floor_set1()
@@ -599,10 +591,10 @@ class Robot:
                     if label['ty'] and self.label_change_CHtoEN(label['name']) == label_name_EN and label['name'] not in self.placed_items :
                         if label['x_offset'] < -10:
                             self.travel(0)
-                            x_last=label['x_offset']
+                            # x_last=label['x_offset']
                         elif label['x_offset'] > 10:
                             self.travel(1)
-                            x_last=label['x_offset']
+                            # x_last=label['x_offset']
                         else :
                             #放置
                             print(33333)
@@ -610,60 +602,39 @@ class Robot:
                             self.stop()
                             print("开始矫正")
                             cv2.imwrite('label1.jpg', image)
-                            x_last -= label['x_offset']
+                            # x_last -= label['x_offset']
                             if t != 0:
-                                self.grabed_items_place_correct(label['name'], x_last)#输入中文标签
+                                self.grabed_items_place_correct(label['name'])#输入中文标签
                             self.arm_place()
                             self.placed_items.append(label['name'])
                             self.slide_floor_set1()
                             p = 1
 
-    def grabed_items_place_correct(self , label_name, x_last, t):
-        
-    #     # print(f"二次检测到的标签: {label_name}")
-    #     # print(t)
-    #     # if c > 0:
-    #     #     c = 1
-    #     # else:
-    #     #     c = 0
-    #     # if t != 0:
-    #     #     self.MOVE(c,500,280)
-    #     # else:
-    #     #     self.MOVE(c,500,30)
-    #     #     print("小矫正")
-            
-    #     # if c == 1 and t != 1:
-    #     #     print("向后矫正")
-    #     # elif c == 0 and t != 1:
-    #     #     print("向前矫正")
-    #     image = self.vision_detector.get_camera_image()# 获取图像
-    #     # 检测标签
-    #     detected_labels = self.vision_detector.detect_labels(image, self.label, label_name)
-    #     for label in detected_labels:
-    #         print(f"二次检测到的标签: {label_name}")
-    #         if label['x_offset'] < -10:
-    #             self.MOVE(0,500,label['x_offset']*f)
+    def grabed_items_place_correct(self , label_name):
         image = self.vision_detector.get_camera_image()# 获取图像
         print(11111)
         # 检测标签
         detected_labels = self.vision_detector.detect_labels(image, self.label, label_name)
-        print(22222)
+        cv2.imwrite('label2.jpg', image)
+        print(22222222222)
         f = 0.4
         for label in detected_labels:
             print(f"二次检测到的标签: {label['name']}")
             if label['x_offset'] < -10:
-                self.move(label['x_offset']*f,0)
-                print('右移')
+                self.MOVE(1,500,label['x_offset']*(-f)+50)
+                print(555555555555)
+                print(label['x_offset']*(-f)+50)
+                self.MOVE(1,500,120)
+                print('前移')
             elif label['x_offset'] > 10:
-                self.move(label['x_offset']*f,0)
-                print('左移')
+                self.MOVE(0,500,label['x_offset']*f+50)
+                print(label['x_offset']*(-f)+50)
+                self.MOVE(1,500,120)
+                print('后移')
             else:
-                print("grabed_items_place_correct 6666")
+                self.MOVE(1,500,120)
                 #放置
-                self.stop()
-
-                
-
+        self.stop()
 
     def execute_task(self):
         """执行移动任务"""
@@ -671,9 +642,10 @@ class Robot:
         try:
             self.MOVE(2, 1000, 210)
             dir=0
-            # dir = self.collect_second_level_drinks(dir)
+            dir = self.collect_second_level_drinks(dir)
             print(555555555)
             dir = self.handle_first_level_drinks(dir)
+            print(666666666)
             self.stop()
             
         except Exception as e:

@@ -73,7 +73,7 @@ class SerialCommunication:
             raise Exception(f"发送命令失败: {str(e)}")
 
     def check_ok(self):
-         while True:
+        while True:
             response = self.read_response()
             print(response)
             if response != None and "ok" in response.lower():
@@ -85,17 +85,32 @@ class SerialCommunication:
         """
         读取机器人返回的数据
         Returns:
-            str: 返回的数据
-        # """
-        # time.sleep(0.1)
-        try:
+        str: 返回的数据
+        """
+        max_retries = 3  # 最大重试次数
+        retry_count = 0  # 当前重试次数
+
+        while retry_count < max_retries:
             if self.serial.in_waiting:
-                response = self.serial.readline().decode().strip()
-                print(f"收到响应: {response}")
-                return response
-            return None
-        except Exception as e:
-            raise Exception(f"读取响应失败: {str(e)}")
+                response = self.serial.readline()
+                try:
+                    # 尝试解码响应
+                    decoded_response = response.decode('utf-8').strip()
+                    print(f"解码成功: {decoded_response}")
+                    return decoded_response
+                except UnicodeDecodeError as e:
+                    print(f"解码错误: {e}")
+                    retry_count += 1
+                    print(f"重试次数: {retry_count}")
+                    # # 重新发送数据
+                    # self.serial.write(b'requestdata')  # 假设发送请求数据的命令
+                    self.send_command("GD")#风险
+                    time.sleep(0.1)  # 等待一段时间再重试
+            else:
+                return None
+
+        print("达到最大重试次数，读取失败")
+        return None
 
     def close(self):
         """

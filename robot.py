@@ -559,7 +559,7 @@ class Robot:
                 break
         if p == 0:
             self.travel(dir)
-        while p == 0:
+        while p == 0 and t < 2:
             print(222222)
             # 读取TOF传感器数据
             tof_values = self.read_tof_list()
@@ -641,7 +641,7 @@ class Robot:
         """执行移动任务"""
         print("开始执行移动任务")
         try:
-            self.MOVE(2, 1000, 190)
+            self.MOVE(2, 1000, 170)
             dir=0
             t=0
             p=0
@@ -654,12 +654,14 @@ class Robot:
             p=p+t
             t=0
             if p ==2 or p==4 or p==0:
+                self.SVO(2, 50, 1000) 
                 self.DTG(1,0)
                 self.RT(90)
                 self.MOVE(0,1000,2000)
                 self.RT(90)
                 dir=1
             elif p == 1 or p == 3:
+                self.SVO(2, 50, 1000) 
                 self.DTG(1,0)
                 self.RT(-90)
                 self.MOVE(1,1000,2000)

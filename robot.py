@@ -509,9 +509,11 @@ class Robot:
                         # self.MOVE(2, 1000, 20)
                         self.slide_floor_set(3)
                         time.sleep(5)
+                        print(88888888888)
                         dir, t=self.grabed_items_place(drink['name'], dir, t) #放置
                         print(f"已上架饮料: {self.placed_items}")
                         dir, t=self.handle_first_level_drinks(dir, t)
+                        print(999999999999)
                         
             if t >= 2:
                 print(f'2t: {t}')

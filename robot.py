@@ -565,14 +565,14 @@ class Robot:
             tof_values = self.read_tof_list()
             front_tof = tof_values[0]
             back_tof = tof_values[1]
-            if dir == 1 and front_tof <= self.FRONT_TOF_THRESHOLD:
+            if front_tof <= self.FRONT_TOF_THRESHOLD:
                 print(f"前方TOF值 {front_tof} <= {self.FRONT_TOF_THRESHOLD}，停止前进")
                 self.stop()
                 dir = 1-dir
                 self.travel(dir)
                 t = t + 1
                 print(f'1t: {t}')
-            elif dir == 0 and back_tof <= self.BACK_TOF_THRESHOLD:
+            elif back_tof <= self.BACK_TOF_THRESHOLD:
                 print(f"后方TOF值 {back_tof} <= {self.BACK_TOF_THRESHOLD}，停止后退")
                 self.stop()
                 dir = 1-dir

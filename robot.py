@@ -20,6 +20,7 @@ class Robot:
         self.slide_move(1,1)
         self.slide_floor_set1()
         self.SVO(2, 50, 1000) 
+        self.DTG(1, 1)
         # self.SVO(3, 15, 1000) 
         # self.SVO(4, 85, 1000)
         print("初始化完成")
@@ -492,13 +493,13 @@ class Robot:
                     print(f"前方TOF值 {front_tof} <= {self.FRONT_TOF_THRESHOLD}，停止前进")
                     self.stop()
                     dir = 1-dir
-                    t += 1
+                    t = t + 1
                     print(f'1t: {t}')
             elif dir == 0 and back_tof <= self.BACK_TOF_THRESHOLD:
                     print(f"后方TOF值 {back_tof} <= {self.BACK_TOF_THRESHOLD}，停止后退")
                     self.stop()
                     dir = 1-dir
-                    t += 1
+                    t = t + 1
                     print(f'1t: {t}')
             else:
                 for drink in detected_drinks:
@@ -510,11 +511,14 @@ class Robot:
                         self.slide_floor_set(3)
                         time.sleep(5)
                         print(88888888888)
+                        print(dir)
+                        print(t)
                         dir, t=self.grabed_items_place(drink['name'], dir, t) #放置
                         print(f"已上架饮料: {self.placed_items}")
+                        print(dir)
+                        print(t)
                         dir, t=self.handle_first_level_drinks(dir, t)
                         print(999999999999)
-                        
             if t >= 2:
                 print(f'2t: {t}')
                 return dir, t
@@ -539,7 +543,7 @@ class Robot:
     
     def grabed_items_place(self , label_name_EN, dir, t):
         """检测标签位置，将抓取的饮料放置到指定位置"""
-        # self.travel(dir)
+        self.travel(dir)
         p = 0#条件
         image = self.vision_detector.get_camera_image()# 获取图像
         # 检测标签
@@ -563,6 +567,7 @@ class Robot:
             self.travel(dir)
         while p == 0 and t < 2:
             print(222222)
+            self.travel(dir)
             # 读取TOF传感器数据
             tof_values = self.read_tof_list()
             front_tof = tof_values[0]
@@ -643,7 +648,7 @@ class Robot:
         """执行移动任务"""
         print("开始执行移动任务")
         try:
-            self.MOVE(2, 1000, 170)
+            self.MOVE(2, 1000, 190)
             dir=0
             t=0
             p=0
@@ -678,6 +683,8 @@ class Robot:
             print(666666666)
             p=p+t
             t=0
+            self.MOVE(0,1000,2000)
+            self.MOVE(3,1000,1000)
 
             self.stop()
             

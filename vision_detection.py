@@ -212,9 +212,9 @@ class VisionDetector:
         target_center_y = (y1 + y2) / 2
         
         # 定义中心区域
-        x11 =190
+        x11 =200
         y11 = 950
-        x12 = 360
+        x12 = 340
         y12 = 1400
         
         # # 计算相对于中心区域的偏移量

@@ -19,8 +19,8 @@ class Robot:
         self.BACK_TOF_THRESHOLD = 300   # 后方TOF安全距离阈值
         self.slide_move(1,1)
         self.slide_floor_set1()
-        self.SVO(2, 50, 1000) 
-        self.DTG(1, 1)
+        # self.SVO(2, 50, 1000) 
+        # self.DTG(1, 1)
         # self.SVO(3, 15, 1000) 
         # self.SVO(4, 85, 1000)
         print("初始化完成")
@@ -366,6 +366,37 @@ class Robot:
         print("前进检测指令已发送")
         self.serial_comm.check_ok()
         print("前进检测指令已执行")
+
+    def JZ(self, direction, moveSpeed, turnSpeed,targetAngle ,targetDistance):
+        """
+        控制机器人移动
+        Args:
+            direction: 移动方向 (0-前进, 1-后退, 2-左移, 3-右移)
+            speed: 移动速度 (1-1000，表示速度)
+            distance: 移动距离 (单位：毫米)
+        """
+        # 方向映射
+        direction_map = {
+            0: "FWD",  # 前进
+            1: "BWD",  # 后退
+            2: "LFT",  # 左移
+            3: "RGT"   # 右移
+        }
+        
+        # 验证方向参数
+        if direction not in direction_map:
+            raise ValueError("无效的方向，必须是0(前进)、1(后退)、2(左移)或3(右移)")
+        
+        # 获取方向指令
+        direction_cmd = direction_map[direction]
+        
+        
+        # 发送移动指令
+        self.serial_comm.send_command(f"{direction_cmd} {moveSpeed} {turnSpeed} {targetAngle} {targetDistance}")
+        print(f"{direction_cmd}{moveSpeed} {turnSpeed} {targetAngle} {targetDistance}指令已发送")
+        self.serial_comm.check_ok()
+        print(f"{direction_cmd} {moveSpeed} {turnSpeed} {targetAngle} {targetDistance}指令已执行")
+
             
     def observe_sample_item(self):
         """观察高台小方桌上的样品物品"""
@@ -448,9 +479,9 @@ class Robot:
                     self.collected_items.append(drink['name'])
                     print(f"已收集饮料: {self.collected_items}")
                 
-                # 递归调用并处理返回值
-                result_dir = self.collect_second_level_drinks(dir,t)
-                return result_dir, t  # 将递归调用的结果向上传递
+                # # 递归调用并处理返回值
+                # result_dir = self.collect_second_level_drinks(dir,t)
+                # return result_dir, t  # 将递归调用的结果向上传递
 
             if dir == 1 and front_tof <= self.FRONT_TOF_THRESHOLD:
                     print(f"前方TOF值 {front_tof} <= {self.FRONT_TOF_THRESHOLD}，停止前进")
@@ -495,32 +526,39 @@ class Robot:
                     dir = 1-dir
                     t = t + 1
                     print(f'1t: {t}')
+                    self.travel(dir)
             elif dir == 0 and back_tof <= self.BACK_TOF_THRESHOLD:
                     print(f"后方TOF值 {back_tof} <= {self.BACK_TOF_THRESHOLD}，停止后退")
                     self.stop()
                     dir = 1-dir
                     t = t + 1
                     print(f'1t: {t}')
+                    self.travel(dir)
             else:
+                # 处理检测到的饮料
+                drink_found = False
                 for drink in detected_drinks:
-                    # print(detected_drinks)
                     if drink['is_in_4'] and drink['name'] not in self.placed_items:
+                        drink_found = True
                         self.stop()
                         self.arm_grab()
-                        # self.MOVE(2, 1000, 20)
                         self.slide_floor_set(3)
-                        time.sleep(5)
+                        time.sleep(4)
                         print(88888888888)
                         print(dir)
                         print(t)
-                        dir, t=self.grabed_items_place(drink['name'], dir, t) #放置
+                        dir, t = self.grabed_items_place(drink['name'], dir, t)
                         print(f"已上架饮料: {self.placed_items}")
                         print(dir)
                         print(t)
-                        dir, t=self.handle_first_level_drinks(dir, t)
-                        print(999999999999)
+                        break  # 处理一个饮料后跳出循环，继续主循环
+                
+                # 如果没有找到饮料，继续移动
+                if not drink_found:
+                    continue
             if t >= 2:
                 print(f'2t: {t}')
+                self.stop()
                 return dir, t
                 
     def label_change_CHtoEN(self, label):
@@ -648,39 +686,43 @@ class Robot:
         """执行移动任务"""
         print("开始执行移动任务")
         try:
-            self.MOVE(2, 1000, 190)
+            # self.MOVE(2, 1000, 190)
             dir=0
             t=0
             p=0
-            # dir, t = self.collect_second_level_drinks(dir, t)
-            print(555555555)
+            dir, t = self.collect_second_level_drinks(dir, t)
+            # print(dir)
+            # print(555555555)
+            # print(t)
             p=p+t
             t=0
             dir, t = self.handle_first_level_drinks(dir, t)
-            print(666666666)
+            # print(666666666)
             p=p+t
             t=0
             if p ==2 or p==4 or p==0:
                 self.SVO(2, 125, 1000) 
                 self.DTG(1,0)
                 self.RT(90)
-                self.MOVE(0,1000,2000)
+                # self.MOVE(0,1000,2000)
+                self.JZ(0,1000,800,90,300)
                 self.RT(90)
                 dir=1
             elif p == 1 or p == 3:
                 self.SVO(2, 125, 1000) 
                 self.DTG(1,0)
                 self.RT(-90)
-                self.MOVE(1,1000,2000)
+                # self.MOVE(1,1000,2000)
+                self.JZ(0,1000,800,270,300)
                 self.RT(-90)
                 dir=0
             t=0
             dir, t = self.collect_second_level_drinks(dir, t)
-            print(555555555)
+            # print(555555555)
             p=p+t
             t=0
             dir, t = self.handle_first_level_drinks(dir, t)
-            print(666666666)
+            # print(666666666)
             p=p+t
             t=0
             self.MOVE(0,1000,2000)

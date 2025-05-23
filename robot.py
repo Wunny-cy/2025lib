@@ -718,15 +718,11 @@ class Robot:
                 dir=0
             t=0
             dir, t = self.collect_second_level_drinks(dir, t)
-            # print(555555555)
             p=p+t
             t=0
             dir, t = self.handle_first_level_drinks(dir, t)
-            # print(666666666)
-            p=p+t
-            t=0
-            self.MOVE(0,1000,2000)
-            self.MOVE(3,1000,1000)
+            self.JZ(0,1000,800,180,20)
+            self.JZ(3,1000,800,180,20)
 
             self.stop()
             
